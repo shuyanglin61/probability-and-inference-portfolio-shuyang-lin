@@ -1,0 +1,28 @@
+---
+title: "Getting to know Zhuoyi Zhan"
+author: "Shuyang Lin"
+date: "8/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Hometown
+Nanchang, Jiangxi, China
+
+## Journey to data science
+Graduated from University of Southern California, she majored in economics and was eager to explore her career path with data. Data science became a apparent choice.
+
+## Favorite food
+Fried chicken and Thai food.
+
+## Hobbies
+TV series
+
+## Favorite books/movies/artists
+Harry Potter,
+Toy Story, 
+Taylor Swift
+
