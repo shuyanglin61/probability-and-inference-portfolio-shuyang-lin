@@ -212,15 +212,20 @@ budget at last.
 
 ``` r
 ave_earnings1 <- vector()
+ave_times1 <- vector()
 max_plays <- vector()
 for(j in 1:50) {
   max_plays[j] <- j*10
   sum_earning <- 0
+  sum_time <- 0
   for(i in 1:300) {
     set.seed(i)
-    sum_earning <- sum_earning + profit(one_series(j*10,200,300,500))
+    game_result <- one_series(j*10,200,300,500)
+    sum_earning <- sum_earning + profit(game_result)
+    sum_time <- sum_time + number_plays(game_result)
   }
   ave_earnings1[j] <- sum_earning/300
+  ave_times1[j] <- sum_time/300
 }
 ```
 
@@ -234,19 +239,33 @@ plot(max_plays, ave_earnings1, type = "l", lwd = 5, xlab = "Maximum plays", ylab
 We increased the maximum play by 10 each time from 10 to 500, showing a
 reduction of average ending budget among 300 gamblers.
 
+Besides, we try calculating the average play times:
+
+``` r
+par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
+plot(max_plays, ave_times1, type = "l", lwd = 5, xlab = "Maximum plays", ylab = "Average plays")
+```
+
+![](writeup_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
 ### Changing the starting budget
 
 ``` r
 ave_earnings2 <- vector()
 starting_budget <- vector()
+ave_times2 <- vector()
 for(j in 1:50) {
   starting_budget[j] <- j*10
   sum_earning <- 0
+  sum_time <- 0
   for(i in 1:300) {
     set.seed(i)
-    sum_earning <- sum_earning + profit(one_series(200,j*10,300,500))
+    game_result <- one_series(200,j*10,300,500)
+    sum_earning <- sum_earning + profit(game_result)
+    sum_time <- sum_time + number_plays(game_result)
   }
   ave_earnings2[j] <- sum_earning/300
+  ave_times2[j] <- sum_time/300
 }
 ```
 
@@ -255,11 +274,20 @@ par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
 plot(starting_budget, ave_earnings2, type = "l", lwd = 5, xlab = "Starting budget", ylab = "Average ending budget")
 ```
 
-![](writeup_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](writeup_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 Still we increased the starting budget by 10 each time from 10 to 500,
 showing a curve of average ending budget among 300 gamblers. After the
 starting budget is more than 240, we find the profit increasing again.
+
+Besides, we try calculating the average plays
+
+``` r
+par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
+plot(starting_budget, ave_times2, type = "l", lwd = 5, xlab = "Starting budget", ylab = "Average plays")
+```
+
+![](writeup_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ### Changing the winning threshold
 
@@ -282,7 +310,7 @@ par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
 plot(winning_threshold, ave_earnings3, type = "l", lwd = 5, xlab = "winning threshold", ylab = "Average ending budget")
 ```
 
-![](writeup_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](writeup_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 The winning threshold is interesting. It did not show a difference when
 less than 200. After that, it made the budget decrease rapidly. And
@@ -309,7 +337,7 @@ par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
 plot(max_wager, ave_earnings4, type = "l", lwd = 5, xlab = "Maximum wager", ylab = "Average ending budget")
 ```
 
-![](writeup_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](writeup_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 The result of changing maximum wager is similar to the starting budget.
 
