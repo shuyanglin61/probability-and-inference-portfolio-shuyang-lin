@@ -25,6 +25,8 @@ this strategy:
 
 The following code is for simulating the procedure.
 
+### A single round
+
 First, we make a single spin of the roulette table as a random choice of
 a color among red, black and green. Be aware that we weight them in
 different amount.
@@ -59,6 +61,8 @@ above.
 After completing these two functions, we are able to simulate one-time
 game process:
 
+### A single game
+
 ``` r
 one_play <- function(previous_ledger_entry, max_wager){
   # Create a copy of the input object that will become the output object
@@ -83,6 +87,8 @@ information. We decide the amount of wager based on the result of the
 last play. The result of one play will be stored in a list, including
 the game index, the budget balance at the start, the wager amount, the
 color of this play, and the budget balance at the end.
+
+### A series of games
 
 Since we have completed one-play, we are able to simulate the whole
 process that a gambler walked into the casino, had some starting money,
@@ -146,6 +152,8 @@ profit <- function(ledger){
 }
 ```
 
+### Addition to the solution 2
+
 We may also calculate the amount of the number of plays as the
 following:
 
@@ -155,13 +163,15 @@ number_plays <- function(ledger){
 }
 ```
 
+### Simulation parameters
+
 Now we could start our simulation. First we should notice we have 4
 parameters each time we run a simulation:
 
 |     Parameter      | Description                     |             Starting value             |
 |:------------------:|:--------------------------------|:--------------------------------------:|
-|     max\_games     | Time threshold for stopping     |                  $200                  |
-|  starting\_budget  | Starting budget                 |               200 plays                |
+|     max\_games     | Time threshold for stopping     |               200 plays                |
+|  starting\_budget  | Starting budget                 |                  $200                  |
 | winning\_threshold | Winnings threshold for stopping | $300 (Starting budget + $100 winnings) |
 |     max\_wager     | Casino’s maximum wager          |                  $500                  |
 
@@ -188,6 +198,8 @@ plot(ledger[,c(1,5)], type = "l", lwd = 5, xlab = "Game Index", ylab = "Budget")
 
 ![](writeup_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
+We could see the loser has their budget run out at last.
+
 ### Winner
 
 ``` r
@@ -200,32 +212,33 @@ plot(l2[,c(1,5)], type = "l", lwd = 5, xlab = "Game Index", ylab = "Budget")
 
 ![](writeup_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
+The winner had their budget exceed the threshold. Though he did once
+lose his profit, he still stood up and won after that.
+
 ## Experiment on the parameters
 
 Now we will try to see if changing the parameter will show difference of
 outcomes. Each time we will vary only one parameter based on
-(200,200,300,500) we used before. We will generate 300 gamblers with
-seeds from 1 to 300. It’s a game for earning, so we will focus on the
-budget at last.
+(200,200,300,500) we used before.
+
+We will generate 1000 gamblers with seeds from 1 to 1000. It’s a game
+for earning, so we will focus on the budget at last. Also, regarding the
+average number of plays before stopping, we will calculate it while
+changing the maximum amount of plays and the starting budget.
 
 ### Changing the maximum amount of plays
 
 ``` r
+set.seed(1)
 ave_earnings1 <- vector()
 ave_times1 <- vector()
 max_plays <- vector()
 for(j in 1:50) {
   max_plays[j] <- j*10
-  sum_earning <- 0
-  sum_time <- 0
-  for(i in 1:300) {
-    set.seed(i)
-    game_result <- one_series(j*10,200,300,500)
-    sum_earning <- sum_earning + profit(game_result)
-    sum_time <- sum_time + number_plays(game_result)
-  }
-  ave_earnings1[j] <- sum_earning/300
-  ave_times1[j] <- sum_time/300
+  game_result <- replicate(1000, one_series(j*10,200,300,500), simplify = FALSE)
+  ave_earnings1[j] <- mean(sapply(game_result, profit))
+  ave_times1[j] <- mean(sapply(game_result,number_plays))
+  print(j)
 }
 ```
 
@@ -237,7 +250,7 @@ plot(max_plays, ave_earnings1, type = "l", lwd = 5, xlab = "Maximum plays", ylab
 ![](writeup_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 We increased the maximum play by 10 each time from 10 to 500, showing a
-reduction of average ending budget among 300 gamblers.
+reduction of average ending budget among 1000 gamblers.
 
 Besides, we try calculating the average play times:
 
@@ -248,26 +261,30 @@ plot(max_plays, ave_times1, type = "l", lwd = 5, xlab = "Maximum plays", ylab = 
 
 ![](writeup_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
+We could see that at the beginning average plays will increase as
+maximum plays do, then after the maximum plays exceed 200, the growth
+trend is stopped. This number means the whole series is expected to end
+at approximately the 200th play.
+
 ### Changing the starting budget
 
+As we decide the winning threshold to be $100 plus starting budget, here
+we need to change it the same as the starting budget.
+
 ``` r
+set.seed(1)
 ave_earnings2 <- vector()
 starting_budget <- vector()
-ave_times2 <- vector()
 for(j in 1:50) {
   starting_budget[j] <- j*10
-  sum_earning <- 0
-  sum_time <- 0
-  for(i in 1:300) {
-    set.seed(i)
-    game_result <- one_series(200,j*10,300,500)
-    sum_earning <- sum_earning + profit(game_result)
-    sum_time <- sum_time + number_plays(game_result)
-  }
-  ave_earnings2[j] <- sum_earning/300
-  ave_times2[j] <- sum_time/300
+  #winning threshold = starting budget + $100
+  game_result <- replicate(1000, one_series(200,j*10,j*10+100,500), simplify = FALSE)
+  ave_earnings2[j] <- mean(sapply(game_result, profit))
+  print(j)
 }
 ```
+
+Then we draw the chart:
 
 ``` r
 par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
@@ -277,58 +294,65 @@ plot(starting_budget, ave_earnings2, type = "l", lwd = 5, xlab = "Starting budge
 ![](writeup_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 Still we increased the starting budget by 10 each time from 10 to 500,
-showing a curve of average ending budget among 300 gamblers. After the
-starting budget is more than 240, we find the profit increasing again.
-
-Besides, we try calculating the average plays
-
-``` r
-par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
-plot(starting_budget, ave_times2, type = "l", lwd = 5, xlab = "Starting budget", ylab = "Average plays")
-```
-
-![](writeup_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+showing a curve of average ending budget among 1000 gamblers. The more
+the starting budget is, the more the gamblers lose.
 
 ### Changing the winning threshold
 
+We could simply know that wininng threshold should be more than the
+starting budget, so here we start changing it from $210.
+
 ``` r
+set.seed(1)
 ave_earnings3 <- vector()
+ave_times3 <- vector()
 winning_threshold <- vector()
 for(j in 1:50) {
-  winning_threshold[j] <- j*10
-  sum_earning <- 0
-  for(i in 1:300) {
-    set.seed(i)
-    sum_earning <- sum_earning + profit(one_series(200,200,j*10,500))
-  }
-  ave_earnings3[j] <- sum_earning/300
+  winning_threshold[j] <- 200 + j*10
+  game_result <- replicate(1000, one_series(200,200,200+j*10,500), simplify = FALSE)
+  ave_earnings3[j] <- mean(sapply(game_result, profit))
+  ave_times3[j] <- mean(sapply(game_result,number_plays))
+  print(j)
 }
 ```
+
+Then we draw the chart:
 
 ``` r
 par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
 plot(winning_threshold, ave_earnings3, type = "l", lwd = 5, xlab = "winning threshold", ylab = "Average ending budget")
 ```
 
+![](writeup_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+The winning threshold shows a difference when less than 300. After that,
+it did not show apparent correlations.
+
+Let us check the play times:
+
+``` r
+par(cex.axis=2, cex.lab = 2, mar = c(8,8,4,4))
+plot(winning_threshold, ave_times3, type = "l", lwd = 5, xlab = "winning threshold", ylab = "Average plays")
+```
+
 ![](writeup_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
-The winning threshold is interesting. It did not show a difference when
-less than 200. After that, it made the budget decrease rapidly. And
-after 300, it again made no differences.
+After $300, winning threshold won’t change the average plays apparently.
+This might due to the starting budget.
 
 ### Changing the maximum wager
 
+We change the maximum amount of a wager at last.
+
 ``` r
+set.seed(1)
 ave_earnings4 <- vector()
 max_wager <- vector()
 for(j in 1:50) {
   max_wager[j] <- j*10
-  sum_earning <- 0
-  for(i in 1:300) {
-    set.seed(i)
-    sum_earning <- sum_earning + profit(one_series(200,200,300,j*10))
-  }
-  ave_earnings4[j] <- sum_earning/300
+  game_result <- replicate(1000, one_series(200,200,300,j*10), simplify = FALSE)
+  ave_earnings4[j] <- mean(sapply(game_result, profit))
+  print(j)
 }
 ```
 
@@ -339,7 +363,7 @@ plot(max_wager, ave_earnings4, type = "l", lwd = 5, xlab = "Maximum wager", ylab
 
 ![](writeup_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
-The result of changing maximum wager is similar to the starting budget.
+The maximum wager shows no apparent correlations.
 
 ## Conclusion and limitation
 
