@@ -34,19 +34,19 @@ for(i in 1:14) {
     data[count,1] <- size[i]
     data[count,2] <- prob[j]
     temp <- rbinom(test_size,size[i],prob[j])
-    data[count, 3] <- abs(mean(temp)/size[i] - prob[j])
+    data[count, 3] <- mean(abs(temp/size[i] - prob[j]))
     data[count, 4] <- data[count,3]/prob[j]
     count <- count + 1;
   }
 }
 
-data
+data$p <- factor(data$p)
 ```
 
 
 
 ```{r}
-(g1 <- ggplot(data, aes(x=log(size,2),y=abs_error)) + geom_line())
+(g1 <- ggplot(data, aes(x=log(size,2),y=abs_error, factor=p)) + geom_line(aes(color=p)) + geom_point(aes(color=p)))
 ```
 
 
@@ -54,7 +54,7 @@ data
 
 
 ```{r}
-ggplot(Rel_Error,aes(log(size,2), X1)) + geom_line()
+(g2 <- ggplot(data, aes(x=log(size,2),y=rel_error, factor=p)) + geom_line(aes(color=p)) + geom_point(aes(color=p)))
 ```
 
 
