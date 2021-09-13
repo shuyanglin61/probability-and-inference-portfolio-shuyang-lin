@@ -33,31 +33,31 @@ for(i in 2:15) {
   size[i-1] <- 2**i
 }
 prob <- c(0.01,0.05,0.1,0.2,0.5)
-Abs_Error <- matrix(NA,14,5)
-Rel_Error <- matrix(NA,14,5)
+data <- data.frame(matrix(NA,70,4))
+colnames(data) <- c("size","p", "abs_error", "rel_error")
+count <- 1
 for(i in 1:14) {
   for(j in 1:5) {
+    data[count,1] <- size[i]
+    data[count,2] <- prob[j]
     temp <- rbinom(test_size,size[i],prob[j])
-    Abs_Error[i,j] <- abs(mean(temp)/size[i] - prob[j])
-    Rel_Error[i,j] <- abs((mean(temp)/size[i] - prob[j])/prob[j])
+    data[count, 3] <- mean(abs(temp/size[i] - prob[j]))
+    data[count, 4] <- data[count,3]/prob[j]
+    count <- count + 1;
   }
 }
 
-Abs_Error <- data.frame(Abs_Error)
-Rel_Error <- data.frame(Rel_Error)
+data$p <- factor(data$p)
 ```
 
 ``` r
-ggplot() + geom_line(Abs_Error,mapping = aes(size, X1)) + geom_line(Abs_Error,mapping = aes(size, X2)) + scale_x_log10() + scale_x_continuous(breaks=seq(0,16,1))
+(g1 <- ggplot(data, aes(x=log(size,2),y=abs_error, factor=p)) + geom_line(aes(color=p)) + geom_point(aes(color=p)))
 ```
-
-    ## Scale for 'x' is already present. Adding another scale for 'x', which will
-    ## replace the existing scale.
 
 ![](writeup_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
 ``` r
-ggplot(Rel_Error,aes(log(size,2), X1)) + geom_line()
+(g2 <- ggplot(data, aes(x=log(size,2),y=rel_error, factor=p)) + geom_line(aes(color=p)) + geom_point(aes(color=p)))
 ```
 
 ![](writeup_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
