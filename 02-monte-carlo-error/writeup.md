@@ -208,7 +208,7 @@ applying log function:
 ![](writeup_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 Now we see that the absolute errors first vary among different p. The
-higher the p, the higher the absolute error with same size.
+higher the p, the higher the absolute error with the same size.
 
 To see further information, we change the absolute error to log2 scale
 too:
@@ -263,7 +263,7 @@ Now we do the same two charts for relative error:
 ![](writeup_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 It shares the same trend with chart 1 we previously discussed. However,
-we could see that **the less the p, the lower the relative error**. We
+we could see that **the less the p, the higher the relative error**. We
 may assume that a small value of p will make it easier to **“shake”**, I
 mean, differentiating from the actual value.
 
@@ -292,7 +292,7 @@ scale too:
 ![](writeup_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 It still shares the same trend with absolute error’s and **the less the
-p, the lower the relative error** still works for this chart.
+p, the higher the relative error** still works for this chart.
 
 # Conclusions
 

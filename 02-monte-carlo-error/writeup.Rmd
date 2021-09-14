@@ -147,7 +147,7 @@ It is hard to see the detail, so we change the x to log() scale by applying log 
 )
 ```
 
-Now we see that the absolute errors first vary among different p. The higher the p, the higher the absolute error with same size.
+Now we see that the absolute errors first vary among different p. The higher the p, the higher the absolute error with the same size.
 
 To see further information, we change the absolute error to log2 scale too:
 ```{r}
@@ -194,7 +194,7 @@ Now we do the same two charts for relative error:
 )
 ```
 
-It shares the same trend with chart 1 we previously discussed. However, we could see that **the less the p, the lower the relative error**. We may assume that a small value of p will make it easier to **"shake"**, I mean, differentiating from the actual value.
+It shares the same trend with chart 1 we previously discussed. However, we could see that **the less the p, the higher the relative error**. We may assume that a small value of p will make it easier to **"shake"**, I mean, differentiating from the actual value.
 
 To see further information, we still change the relative error to log2 scale too:
 ```{r}
@@ -216,7 +216,7 @@ To see further information, we still change the relative error to log2 scale too
 )
 ```
 
-It still shares the same trend with absolute error's and **the less the p, the lower the relative error** still works for this chart.
+It still shares the same trend with absolute error's and **the less the p, the higher the relative error** still works for this chart.
 
 # Conclusions
 
