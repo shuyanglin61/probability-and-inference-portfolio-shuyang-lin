@@ -1,0 +1,166 @@
+---
+title: "How often does the better team win the World Series?"
+author: "Shuyang Lin"
+date: "9/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preface
+The world series is a best-of-7 match-up between the American and National Leagues of Major League Baseball champions. This blog will use probability concepts to solve specific questions assuming a final match between the Braves and the Yankees as participants. Based on calculations performed later, we could see how the basic probability we believe and the parameters of the match rule design will change the result of the champion.
+
+# Part 1: Setup
+
+Now we have two teams reach the final: the Braves and the Yankees. As we will discuss the Best-of-X match later, we will assume the probability to be constant that the Braves will win in any given single game. Now we make it 0.55.
+
+```{r}
+# the probability that the Braves win in any given game
+p_b <- 0.55
+```
+
+As the game between the Braves and the Yankees will always end, we know there are only two results: the Braves win or the Yankees win. Therefore, the probability that the Yankees win will be one minus the probability that the Braves win.
+
+```{r}
+# the probability that the Yankees win in any given game is related to the Braves'
+p_y <- 1 - p_b # 0.45
+```
+
+We would modify these two variables later. Those were default values till then.
+
+# Part 2: Questions under best-of-7 setting
+
+First, we would discuss the influence of the **p_b** we set in part 1 when we have a best-of-7 final match.
+
+As we assume, in any given game, the Braves will win at a constant probability, no matter the result of previous games or circumstance conditions like weather, home turf, or health situation of players. Therefore, each game or so-called each round is a binary experiment. That is similar to coin flips, as we got either a head or a tail.
+
+To win the World Series in the real world, the Braves **must be the first team to win four games**. As the severely tight situation will be a 3:4 or 4:3, it is sure that the match won't exceed seven games. As long as one of the teams reaches four wins, the match will stop in the real world.For example, We could record the game sequence as a group with the result of every single game as a single letter. The outcome of a match will be like (b, y, b, b, b) as a 4:1 between the Braves and the Yankees.
+
+However, if we change the aspect to regard the final, we could assume that two teams **must complete seven games** to end the final match. Then, the probability of (b, y, b, b, b) would be the sum of those of (b, y, b, b, b, b, b), (b, y, b, b, b, b,y), ..., and so on, as in the real world, we only have the first five games. And since we assume the probability of the Braves winning a single game is constant, we simplify the final match to be a random variable obeying a binomial distribution with the size as seven and the probability of each binary experiment as p_b.
+
+Before typing codes in R, let us summarize the assumptions we have right now.
+
+### Assumptions
+
++ **Rule 1**: Each game is a binary experiment obeying a constant probability **p_b**.
+
++ **Rule 2**: The final match is a binomial experiment including every game obeying Rule 1, with the size default set seven.
+
+### Question 1: What is the probability that the Braves win the World Series given that p_b =  0.55?
+
+To win the world series, the Braves need to win equal to or more than four games. That is, in the binomial experiment, **b** must appear equal to or more than four times. That is related to **the cumulative distribution function**.
+
+In probability theory and statistics, the **cumulative distribution function** (CDF) is the probability that a random variable X will take a value less than or equal to a given value x.^[https://en.wikipedia.org/wiki/Cumulative_distribution_function]
+
+For example, if we mark the CDF as P(X<=x) or simply F(x), it means it will return the probability that the value of X is less than or equal to x. For this question, we count the times of 'b' in the result sequence as B. No wonder it is a random variable obeying the binomial distribution usually marked as F(B, 7, p_b). We know that the probabilities add up to one, so we have:
+
+> P(Braves win World Series) = P(X>=4) = 1 - P(X<=3)
+
+In human language, it means:
+
+> The probability that the Braves win the World Series equals the probability that the Braves win equal to or more than 4, and could be calculated by one minus the probability that the Braves win equal to or less than 3.
+
+Now let's switch to coding. In R, we have the packages for probabilities, and we have the function for calculating CDF of the binomial distribution. It is **pbinom(q, size, prob)**. We use the parameters as below:
+
+|       Parameter       | Description                     |
+|:---------------------:|:--------------------------------|
+|           q           | The number of positive experiments     |
+|         size          | The number of experiments     |
+|         prob          | The probability of positive in each experiment     |
+
+Therefore, the answer to Question 1 could be given by the following code:
+```{r}
+# the answer to Question 1
+(
+  ans_q1 <- 1 - pbinom(
+    q = 3,
+    size = 7,
+    prob = p_b # 0.55 here
+  )
+)
+# result: 0.6082878
+```
+
+The answer is **0.6082878**.
+
+### Question 2: What is the probability that the Braves win the World Series given that p_b = x?
+
+Now we set the probability that the Braves win a game as a random variable. We will need to draw a figure to show the relationship between p_b and P(the Braves win World Series).
+
+First, we need to generate a series of values that p_b could be:
+```{r}
+# generate the values of p_b from 0 to 1 by each .05
+(
+  pb_ls <- seq(0, 1, .05)
+)
+```
+
+And then, we generate a matrix with every row stands for the value of p_b and the corresponding result of the CDF:
+```{r}
+# calculate results of CDF
+bo7 <- data.frame(matrix(NA,length(pb_ls),0))
+bo7$pb_ls <- pb_ls
+bo7$cdf <- 1 - pbinom(3, 7, bo7$pb_ls)
+```
+
+After this, let us draw the figure by using a package of R called "ggplot2":
+```{r}
+# draw the figure of bo7
+library(ggplot2)
+(
+  ans_q2 <- ggplot(
+              data = bo7,
+              mapping = aes(
+                x = pb_ls,
+                y = cdf
+              )
+            ) + 
+            geom_point() +
+            geom_smooth(
+              method = 'gam', # generalized additive model
+              color = 'black'
+            ) +
+            labs(
+              title = 'Probability of winning the World Series',
+              x = 'Probability of the Braves winning a head-to-head matchup',
+              y = 'Pr(Win World Series)'
+            ) +
+            theme_bw()
+)
+```
+
+It is **the answer to Question2**. We may see that the probability that the Braves win the World series increases as the probability of the Braves winning a head-to-head matchup increases.
+
+# Part 2: Questions under best-of-X settings
+
+Now let us discuss the situation when we change **the series length**, marked as X. As the meaning of 'best-of', each team needs to win at least more than a half of X games. Both the q and the size in pbinom will change together.
+
+### Question 3: What is the shortest series length so that P(Braves win World Series|p_b = .55) ≥ 0.8
+
+With R along our side, we could use simulations to avoid calculations by our hands. Let us generate a series of match lengths. In best-of-X games, to avoid a tie, the X will always be odd.
+```{r}
+# generate a series of match lengths from 1 to 101 by 2.
+len_match <- seq(1,101,2)
+```
+
+And then, let us calculate P(Braves win World Series|PB = .55) with different lengths.
+```{r}
+# calculate P(Braves win World Series|PB = .55) with different lengths
+box_55 <- data.frame(matrix(NA,length(len_match),0))
+box_55$len <- len_match
+box_55$p <- 1 - pbinom(len_match%/%2, len_match, .55)
+```
+
+And **the answer to Question 3** will be:
+```{r}
+# find the shortest length when P(Braves win World Series|PB = .55) >= .8
+(
+  ans_q3 <- min(box_55 %>% filter(p>=0.8) %>% select(len))
+)
+# the answer is 71.
+```
+
+The answer is **71**. The series length should be equal to or more than 71 so that P(Braves win World Series|p_b = .55) ≥ 0.8.
+
