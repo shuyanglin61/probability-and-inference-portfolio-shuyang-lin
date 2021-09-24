@@ -30,6 +30,14 @@ p_y <- 1 - p_b # 0.45
 
 We would modify these two variables later. Those were default values till then.
 
+We have two libraries of R to import:
+```{r eval='hide', results='hide'}
+# for matrix processing
+library(tidyverse)
+# for figure drawing
+library(ggplot2)
+```
+
 # Part 2: Questions under best-of-7 setting
 
 First, we would discuss the influence of the **p_b** we set in part 1 when we have a best-of-7 final match.
@@ -108,7 +116,6 @@ bo7$cdf <- 1 - pbinom(3, 7, bo7$pb_ls)
 After this, let us draw the figure by using a package of R called "ggplot2":
 ```{r}
 # draw the figure of bo7
-library(ggplot2)
 (
   ans_q2 <- ggplot(
               data = bo7,
@@ -164,3 +171,120 @@ And **the answer to Question 3** will be:
 
 The answer is **71**. The series length should be equal to or more than 71 so that P(Braves win World Series|p_b = .55) ≥ 0.8.
 
+### Question 4: What is the shortest series length so that P(Braves win World Series|p_b = x) ≥ 0.8?
+
+This question is an addition to Question 3. Each time we change p_b, the corresponding shortest series length will vary. Let us generate a sequence of the values p_b could be.
+```{r}
+# generate the values of p_b from .52 to 1 by each .01
+(
+  pb_ls_2 <- seq(.52, 1, .01)
+)
+```
+
+We will discuss why it starts from .52 later. Then, we could calculate the process similarly to what we've done for Question 3:
+
+```{r}
+# calculate the answer for Question 4
+len_match <- seq(1,1001,2)
+
+pb_box <- data.frame(matrix(NA,length(pb_ls_2),0))
+pb_box$p_b <- pb_ls_2
+
+get_shortest <- function(p_b) {
+  box_temp <- data.frame(matrix(NA,length(len_match),0))
+  box_temp$len <- len_match
+  box_temp$p <- 1 - pbinom(len_match%/%2, len_match, p_b)
+  min(box_temp %>% filter(p>=0.8) %>% select(len))
+}
+
+pb_box$len <- mapply(get_shortest, pb_box$p_b)
+
+```
+
+As we've calculated the matrix, we could draw the figure as below:
+```{r}
+# draw the figure between p_b and shortest series length
+(
+  ans_q4 <- ggplot(
+              pb_box,
+              aes(
+                x = p_b,
+                y = len
+              )
+            ) +
+            geom_point() +
+            geom_line(
+              color = 'black'
+            ) +
+            labs(
+              title = 'Shortest series so that P(Win WS given p) >= 0.8',
+              x = 'Probability of the Braves winning a head-to-head matchup',
+              y = 'Series length'
+            ) +
+            theme_bw()
+)
+```
+
+This is **the answer to Question 4**. As the figure shows, the larger the Probability of the Braves winning a head-to-head matchup, the smaller the Series length. After p_b exceeds 0.8, the shortest series length becomes 1. That is simply because the Braves under this condition could simply win the first game at a probability equal to or larger than 0.8.
+
+Specially, we could calculate that if p_b is 0.5, the chance that the Braves win the match will always be 0.5.
+```{r results='hide'}
+# p_b = .5 means P(Win WS) = .5
+(
+  # calculate the sequence of each series length with the corresponding P(Win WS)
+  1 - pbinom(len_match%/%2, len_match, .5)
+)
+# They are all .5
+```
+
+That could be solved by analytics, too. We know the CDF of binomial distribution is as below:
+
+> F(X<=x) = (<sup>n</sup><sub style="margin-left:-7px">x</sub>) p<sup>x</sup> (1-p)<sup>(n-x)</sup>
+
+When p = 0.5, we get p = 1-p. And choose n divided exactly by 2 from n when n is odd results in the calculation result in 0.5 exactly. It is constant.
+
+### Question 5: Calculate P(p_b = 0.55|Braves win World Series in 7 games) under the assumption that either p_b = 0.55 or p_b = 0.45. Explain your solution.
+
+As the definition, conditional probability is calculated as below^[https://en.wikipedia.org/wiki/Conditional_probability]:
+
+> P(A|B) = P(A and B) / P(B)
+
+In the question, p_b is either 0.55 or 0.45. Therefore, we could assume that P(p_b = 0.55) = P(p_b = 0.45) = 0.5.
+
+**The answer to Question 5** could be given as:
+```{r}
+# P(p_b = 0.55 and Braves win World Series in 7 games) = P(p_b = 0.55) * P(Braves win World Series in 7 games|p_b = 0.55)
+(
+  p_ab_.55 <- 0.5 * ans_q1
+)
+# P(p_b = 0.45 and Braves win World Series in 7 games) = P(p_b = 0.45) * P(Braves win World Series in 7 games|p_b = 0.45)
+(
+  p_ab_.45 <- 0.5 * (1 - pbinom(3,7,.45))
+)
+# P(Braves win World Series in 7 games) = P(p_b = 0.55 and Braves win World Series in 7 games) + P(p_b = 0.45 and Braves win World Series in 7 games)
+(
+  p_ab <- p_ab_.55 + p_ab_.45
+)
+# P(p_b = 0.55|Braves win World Series in 7 games) = P(p_b = 0.55 and Braves win World Series in 7 games) / P(Braves win World Series in 7 games)
+(
+  ans_q5 <- p_ab_.55 / p_ab
+)
+```
+
+**The answer to Question 5** is 0.6082878.
+
+Further more, if we change the P(p_b = 0.55) = x, and we mark P(Braves win World Series in 7 games|p_b = 0.55) = p, the calculation will be like
+
+> P(p_b = 0.55|Braves win World Series in 7 games) = x * p / (x * p + (1-x) * (1-p))
+
+And we should know p here is **the answer to Question 1**. So we could define a function to measure the relationship between the assumption of x and the answer to Question 5.
+```{r}
+# make it a function. x is the value of P(p_b = 0.55)
+ans_q5_calculation <- function(x) {
+  x * ans_q1 / (x * ans_q1 + (1-x) * (1-ans_q1)) 
+}
+```
+
+Now we finished the job.
+
+# Refer links
