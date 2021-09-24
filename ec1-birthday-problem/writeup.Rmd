@@ -1,0 +1,235 @@
+---
+title: "Birthday Problem"
+author: "Shuyang Lin"
+date: "9/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction to the birthday problem
+
+**Birthday problem** is a typical probability problem. It is given as below:
+
+> In a class of N individuals, what is the probability that at least two students will share a birthday?
+
+With this question, we have several assumptions ahead:
+
++ There are 365 days a year. We ignore leap days.
+
++ The probability of an individual's birthday being any day in a year is equal. In other words, the birthday of every individual obeys a discrete uniform distribution with the interval [1, 365]. P(X=x) = 1/365 constantly.
+
++ Every individual was born independently. That means the birthdays of individuals are independent random variables, all obeying the discrete uniform distribution with the interval [1, 365].
+
++ As the unit events got equal probabilities, the probability in this question is calculated by **the number of combinations filtered** divided by **the number of all combinations**.
+
++ N is smaller than 81 and larger than 0. That is, N ~ [1, 80].
+
+Then, we have two ways to solve this problem. We could use analytic thoughts to infer the result. Or we could use simulations to estimate the probability.
+
+## Analytical way
+
+With these assumptions, we will try to divide the question into unit events. 
+
+The event mentioned in the problem is:
+
+> At least two students will share a birthday.
+
+It is hard to calculate at the same time. But if we think from the opposite side:
+
+> No students will share a birthday.
+
+Then we have the equation:
+
+> P(At least two students will share a birthday) = 1 - P(No students will share a birthday)
+
+Let us record all birthdays as a combination with size N and without an order. If there are no duplicate values in this combination, it means "No students will share a birthday".
+
+### Combinations
+
+We know 0 < N < 81, so the problem seems to be transformed to calculate the number of combinations with size as N and all elements unique and generated from 365 days.
+
+In mathematics, a **Combination** is a selection of items from a collection, such that the order of selection does not matter.^[https://en.wikipedia.org/wiki/Combination]
+
+The number of k-combinations (a subset of k **distinct** elements of a set) is given by the following formula:
+
+> C(n,k) = n! / (k! * (n-k)!)
+
+Where C stands for combination, and "n!" means factorial of n. The factorial is the product of all positive integers less than or equal to n, as below^[https://en.wikipedia.org/wiki/Factorial]:
+
+> n! = n * (n-1) * (n-2) * ... * 3 * 2 * 1
+
+The number of all permutations of birthdays of N individuals will be 365<sup>N</sup>, but do remember **permutations and sequences** are different from **combinations**. So this is not the number we are using.
+
+The number of all **combinations** with repetition of birthdays of N individuals uses another formula^[https://en.wikipedia.org/wiki/Combination#Number_of_combinations_with_repetition]:
+
+> ((n k)) = C(n+k-1, k)
+
+Its proof is included in the referral link.
+
+However! Again, we should not use this function because **the probability of each combination with repetition is not equal!** That makes mistakes!
+
+Therefore, we need to go back and use **permutations** to calculate the probability.
+
+### Permutations
+
+**The number of k-permutations (permutations of k distinct elements from a set) ** is given by following formula:
+
+> A(n, k) = n! / (n-k)! = C(n, k) * A(n, n)
+
+Where C(n, k) is given above, and A(n, n) equals n!.
+
+Now we have sufficient theoretical preparations. In R, we could calculate the number of k-permutations by combining the function **choose()** and the function **factorial()**.
+
+```{r}
+# libraries
+library(tidyverse)
+library(ggplot2)
+
+# choose(n, k) means from n choose k
+answer_analytic <- function(N) {
+  1 - choose(365, N) * factorial(N) / 365^N
+}
+```
+
+We will keep this function for later use.
+
+## Simulation
+
+Rather than analytics, we could use simulations to estimate the answers.
+
+First, we will set N, the class size, as a parameter for each series of experiments. We will generate a sequence of birthdays as below:
+```{r}
+# set the seed
+set.seed(1)
+# generate a sequence of birthdays
+generate_class <- function(N) {
+  sample(365, N, replace=TRUE)
+}
+```
+
+Then let us assign a value to be the experiment size. Right now, let us make it default at 1,000,000. In a series of experiment, we simulate 1,000,000 class and see how many classes have no duplicate birthdays, return the percentage:
+```{r}
+# check unique
+is_unique <- function(ls) {
+  length(unique(ls))==length(ls)
+}
+# function for simulation under given N
+answer_simulation <- function(N,size = 1000000) {
+  classes <- replicate(size, generate_class(N), simplify = F)
+  1 - sum(sapply(classes, is_unique))/size
+}
+```
+
+Now we got the estimated probability by simulations.
+
+# Comparing two ways
+
+In order to compare the performance of both approaches, let us generate a matrix to compare their results with the same inputs.
+```{r cache=T, echo=T, include=T, result='hide'}
+# generate the matrix of application
+two_solution <- data.frame(matrix(NA,80,0))
+
+# set a list of values of N
+two_solution$N <- seq(1,80,1)
+
+# using analytics
+two_solution$ana <- sapply(two_solution$N, answer_analytic)
+
+# using simulation at million
+two_solution$sim_m <- sapply(two_solution$N, answer_simulation)
+```
+
+We have enough data for a plot:
+```{r}
+# transform the matrix
+
+drawing_temp <- two_solution %>% pivot_longer(c(ana,sim_m), names_to = 'type', values_to = 'p')
+
+# draw the figure
+(
+  g1 <- ggplot(
+          drawing_temp,
+          aes(
+            x = N,
+            y = p,
+            color = factor(type),
+            shape = factor(type)
+          ),
+          alpha = 0.1
+        ) +
+        geom_point() +
+        scale_color_manual(
+          values = c("ana" = 'red', "sim_m" = 'black'), 
+          labels = c('Analytic solution', 'Simulation solution')
+        ) +
+        scale_shape_manual(
+          values = c('ana' = 16, 'sim_m' = 1),
+          labels = c('Analytic solution', 'Simulation solution')
+        ) +
+        theme_bw() +
+        theme(
+          legend.title=element_blank()
+        )
+)
+```
+
+They are very close.
+
+If we reduce the simulation size to 1000:
+```{r echo=T, results='hide'}
+# using simulation at million
+two_solution$sim_k <- sapply(two_solution$N, answer_simulation,size=1000)
+```
+
+Now the figure:
+```{r}
+# transform the matrix
+drawing_temp2 <- two_solution %>% pivot_longer(c(ana,sim_m, sim_k), names_to = 'type', values_to = 'p')
+
+# draw the figure
+(
+  g2 <- ggplot(
+          drawing_temp2,
+          aes(
+            x = N,
+            y = p,
+            color = factor(type),
+            shape = factor(type)
+          ),
+          alpha = 0.1
+        ) +
+        geom_point() +
+        scale_color_manual(
+          values = c("ana" = 'red', "sim_m" = 'black', "sim_k" = "blue"), 
+          labels = c('Analytic solution', 'Simulation solution with million size', 'Simulation solution with thousand size')
+        ) +
+        scale_shape_manual(
+          values = c('ana' = 16, 'sim_m' = 1, 'sim_k' = 16),
+          labels = c('Analytic solution', 'Simulation solution with million size','Simulation solution with thousand size')
+        ) +
+        theme_bw() +
+        theme(
+          legend.title=element_blank()
+        )
+)
+```
+
+Now we see the blue points shaking among the red points. That means we got larger unavoidable errors if we had a smaller experiment size.
+
+# Conclusions
+
+We may make a table for pros and cons:
+
+|       Solution Type       | Pros                     | Cons |
+|:---------------------:|:--------------------------------|:--------------------------------|
+|          Analytic           | The value is reasonable and exact| May mess up with concepts and calculation|
+|         Simulation          | Avoid inference     | Time and equipment consuming|
+
+During the analytical solution, we found several related concepts and spent much time figuring out which should be used. But as far as we came up with the right path, the answer we calculated is precise and reliable.
+
+During the simulation solution, we directly built up a model to process and simulate. However, it took so long time to run the code. Also, if we had a small experiment size, the estimated value would sometimes differ on a large scale from the exact answer.
+
+# Refer links
