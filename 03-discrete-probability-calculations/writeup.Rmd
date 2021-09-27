@@ -245,21 +245,37 @@ When p = 0.5, we get p = 1-p. And choose n divided exactly by 2 from n when n is
 
 ### Question 5: Calculate P(p_b = 0.55|Braves win World Series in 7 games) under the assumption that either p_b = 0.55 or p_b = 0.45. Explain your solution.
 
+**This question is not well defined, and it really confuses those use English as a second or third language. Please add more strict explanations next time, or avoid questions like this one.**
+
 As the definition, conditional probability is calculated as below^[https://en.wikipedia.org/wiki/Conditional_probability]:
 
 > P(A|B) = P(A and B) / P(B)
 
 In the question, p_b is either 0.55 or 0.45. Therefore, we could assume that P(p_b = 0.55) = P(p_b = 0.45) = 0.5.
 
+We know the game stops at 7, so there must be a team win the last game, and win 3 games in the previous 6 games. Regard p_b as not a random variable first, the probability of this should be as below:
+```{r}
+p7_result <- function(p_b) {
+  # Games reach 7 and the Braves win
+  p7_b <- p_b * dbinom(3, 6, p_b)
+  # Games reach 7 and the Yankees win
+  p7_y <- (1 - p_b) * dbinom(3, 6, 1-p_b)
+  # Sum them and get P(Games reach 7)
+  c(p7_b = p7_b, p7 = p7_b + p7_y)
+}
+```
+
+Here, p7_b is P(Braves win World Series in 7 Games | Given p_b).
+
 **The answer to Question 5** could be given as:
 ```{r}
 # P(p_b = 0.55 and Braves win World Series in 7 games) = P(p_b = 0.55) * P(Braves win World Series in 7 games|p_b = 0.55)
 (
-  p_ab_.55 <- 0.5 * ans_q1
+  p_ab_.55 <- 0.5 * p7_result(.55)[1]
 )
 # P(p_b = 0.45 and Braves win World Series in 7 games) = P(p_b = 0.45) * P(Braves win World Series in 7 games|p_b = 0.45)
 (
-  p_ab_.45 <- 0.5 * (1 - pbinom(3,7,.45))
+  p_ab_.45 <- (1 - 0.5) * p7_result(.45)[1]
 )
 # P(Braves win World Series in 7 games) = P(p_b = 0.55 and Braves win World Series in 7 games) + P(p_b = 0.45 and Braves win World Series in 7 games)
 (
@@ -271,17 +287,17 @@ In the question, p_b is either 0.55 or 0.45. Therefore, we could assume that P(p
 )
 ```
 
-**The answer to Question 5** is 0.6082878.
+**The answer to Question 5** is 0.55.
 
-Further more, if we change the P(p_b = 0.55) = x, and we mark P(Braves win World Series in 7 games|p_b = 0.55) = p, the calculation will be like
+Further more, if we change the P(p_b = 0.55) = x, mark P(Braves win World Series in 7 games|p_b = 0.55) = p, and mark P(Braves win World Series in 7 games|p_b = 0.55) = pp, the calculation will be like
 
-> P(p_b = 0.55|Braves win World Series in 7 games) = x * p / (x * p + (1-x) * (1-p))
+> P(p_b = 0.55|Braves win World Series in 7 games) = x * p / (x * p + (1-x) * pp)
 
-And we should know p here is **the answer to Question 1**. So we could define a function to measure the relationship between the assumption of x and the answer to Question 5.
+So we could define a function to measure the relationship between the assumption of x and the answer to Question 5.
 ```{r}
 # make it a function. x is the value of P(p_b = 0.55)
 ans_q5_calculation <- function(x) {
-  x * ans_q1 / (x * ans_q1 + (1-x) * (1-ans_q1)) 
+  x * p7_result(.55)[1] / (x * p7_result(.55)[1] + (1-x) * p7_result(.45)[1])
 }
 ```
 
