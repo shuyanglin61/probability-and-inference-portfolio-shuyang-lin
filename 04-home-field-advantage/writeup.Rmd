@@ -1,0 +1,351 @@
+---
+title: "Home-Field Advantage"
+author: "Shuyang Lin"
+date: "9/30/2021"
+output: html_document
+---
+
+# Introduction
+
+The **home-field advantage** is the edge that a team may have when playing a game at its home stadium. For example, it is the edge the Braves may have over the Yankees when the head-to-head match-up is in Atlanta. It is the advantage the Yankees may have when the head-to-head match-up is in New York^[[Intro to home-field advantage](https://github.com/thomasgstewart/data-science-5620-Fall-2021/blob/master/deliverables/04-world-series-home-field.md)].
+
+In this blog, I will use simulation and analytic methods to compare the probability of winning the World Series with and without home-field advantage, to show a complex probability calculation as an addition to [the binomial distribution](https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/tree/master/03-discrete-probability-calculations).
+
+# Setup the Variables
+
+The World Series is a **first-to-4-wins** or so-called **best-of-7** match-up between the champions of the American and National Leagues of Major League Baseball.
+
+Supposing that the Braves and the Yankees are teams competing in the World Series, there will be **two possible schedules **for each game of the series (NYC = New York City, ATL = Atlanta). The schedules might be as below^[[Intro to the World Series](https://github.com/thomasgstewart/data-science-5620-Fall-2021/blob/master/deliverables/04-world-series-home-field.md)]:
+
+| Overall advantage | Game 1 | Game 2 | Game 3 | Game 4 | Game 5 | Game 6 | Game 7 |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Braves | ATL | ATL |	NYC |	NYC | NYC |	ATL |	ATL |
+| Yankees |	NYC |	NYC |	ATL |	ATL |	ATL |	NYC |	NYC |
+
+In other words, in 7 games, there will be four in the first turf and the other three in the second turf.
+
+Let P<sub>B</sub> be the probability that the Braves win a single head-to-head match-up with the Yankees, under the assumption that home-field advantage doesn’t exist. Let P<sub>B</sub><sup>H</sup> denote the probability that the Braves win a single head-to-head match-up with the Yankees as the home team (H for home). Let P<sub>B</sub><sup>A</sup> denote the probability that the Braves win a single head-to-head match-up with the away team (A for away). The probability that the Braves win a single head-to-head match-up with or without home-field advantage is given by the table below^[[To decide the probability](https://github.com/thomasgstewart/data-science-5620-Fall-2021/blob/master/deliverables/04-world-series-home-field.md)]:
+
+| Game Location | Without Advantage | With Advantage |
+|:----:|:-----:|:---:|
+| ATL | P<sub>B</sub> | P<sub>B</sub><sup>H</sup> = P<sub>B</sub> * H |
+| NYC | P<sub>B</sub> | P<sub>B</sub><sup>A</sup> = 1 - (1 - P<sub>B</sub>) * H |
+
+Here, we calculate the home-field advantage as the single probability multiplying a multiplier named **H**. When the Braves is the away team, the multiplier is used on the Yankees, which results in a more complex calculation than the one when being the home team.
+
+Let us setup these rules in R and defaultly set p_b as 0.55 and multiplier H as 1.1:
+```{r libs, include=FALSE}
+library('tidyverse')
+library('ggplot2')
+library('dplyr')
+library('data.table')
+```
+
+```{r setup}
+# P(Braves win head-to-head match-up without home-field advantage)
+p_b <- 0.55
+
+# Home-field advantage multiplier
+H <- 1.1
+```
+
+# Question 1: Calculate analytically the probability that the Braves win the world series with and without home-field advantage when PB = 0.55. What is the difference in probabilities?
+
+Supposing the sequence of game locations is {NYC, NYC, ATL, ATL, ATL, NYC, NYC}, we know that the Braves will have home-field advantage at Game 3~5 and lose home-field advantage to the Yankees at Game 1~2 and 6~7.
+```{r location}
+# sequence of game locations
+loc <- c('NYC', 'NYC', 'ATL', 'ATL', 'ATL', 'NYC', 'NYC')
+```
+
+As it is a best-of-7 games, the Braves needs to win at least four games in the final.
+
+### Without home-field advantage
+
+When without home-field advantage, if we mark the number of games the Braves win in 7 games as **B**, the question is transformed to:
+
+> Calculate P(B>=4)
+
+Since each game is independent and obeys the same binary distribution, we could know that **B** is a random variable obeying a binomial distribution with size 7 and probability as p_b^[[Binomial Distribution](https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/tree/master/03-discrete-probability-calculations)]. Therefore, the probability that the Braves win the world series without home-field advantage could be given as below:
+```{r without}
+# function that Braves win without home-field advantage
+p_without <- function(p_b) {
+  # 1 - P(B<=3)
+  1 - pbinom(3, 7, p_b)
+}
+```
+
+The answer could be given as below:
+```{r q1 a1}
+# Partial answer to question1
+(
+  answer1_without <- p_without(p_b) # p_b = 0.55
+)
+```
+
+### With home-field advantage
+
+When with home-field advantage, we need to introduce the sequence of locations. As we regard the final as P(B<=4), now we have two random variables, **B<sub>H</sub>** when in ATL and **B<sub>A</sub>** when in NYC. They are given as the table below:
+
+| Sign | Meaning |
+|:--:|:--|
+|B<sub>H</sub>| The number of games the Braves win in 3 games in ATL |
+|B<sub>A</sub>| The number of games the Braves win in 4 games in NYC |
+
+Now, to win the final match, the Braves need to win at least 4 games. In other word, we are calculating the probability that:
+
+> P(B<sub>H</sub> + B<sub>A</sub>>=4)
+
+And we know P(B<sub>H</sub> + B<sub>A</sub>>=4) = 1 - P(B<sub>H</sub> + B<sub>A</sub><=3)
+
+As we don't care the sequence of the games, the events that B<sub>H</sub> + B<sub>A</sub><=3 is given as below:
+
+|Braves Win Totally| Braves Win in ATL | Braves Win in NYC |
+|:-:|:-:|:-:|
+|0|0|0|
+|1|1|0|
+|1|0|1|
+|2|0|2|
+|2|1|1|
+|2|2|0|
+|3|0|3|
+|3|1|2|
+|3|2|1|
+|3|3|0|
+
+As B<sub>H</sub> obeys a binomial distribution with size 3 and p P<sub>B</sub><sup>H</sup>, and B<sub>A</sub> obeys a binomial distribution with size 4 and p P<sub>B</sub><sup>A</sup>, we could calculate the probability that the Braves win the world series with home-field advantage:
+```{r}
+p_with <- function(p_b, H) {
+  p_b_h <- p_b * H
+  p_b_a <- 1 - (1-p_b)*H
+  1-(
+    dbinom(0, 3, p_b_h) * dbinom(0, 4, p_b_a) +
+    dbinom(1, 3, p_b_h) * dbinom(0, 4, p_b_a) +
+    dbinom(0, 3, p_b_h) * dbinom(1, 4, p_b_a) +
+    dbinom(0, 3, p_b_h) * dbinom(2, 4, p_b_a) +
+    dbinom(1, 3, p_b_h) * dbinom(1, 4, p_b_a) +
+    dbinom(2, 3, p_b_h) * dbinom(0, 4, p_b_a) +
+    dbinom(0, 3, p_b_h) * dbinom(3, 4, p_b_a) + 
+    dbinom(1, 3, p_b_h) * dbinom(2, 4, p_b_a) +
+    dbinom(2, 3, p_b_h) * dbinom(1, 4, p_b_a) +
+    dbinom(3, 3, p_b_h) * dbinom(0, 4, p_b_a)
+  )
+}
+```
+
+The answer to question 1 is:
+```{r q1 a2}
+# Partial answer to question1
+(
+  answer1_with <- p_with(p_b, H) # p_b = 0.55 and H = 1.1
+)
+```
+
+The difference in probabilities is:
+```{r q1 a3}
+(
+  answer1_difference <- abs(answer1_without - answer1_with)
+)
+```
+
+# Question 2: Calculate the same probabilities as the previous question by simulation
+
+Still, we need to divide the question into two parts.
+
+### Without home-field advantage
+
+This situation is further discussed at [03-discrete-probability-calculations](https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/tree/master/03-discrete-probability-calculations). We will simulate a number of final matches, and calculate the number of the World Series that the Braves win.
+
+```{r seed, include=F}
+set.seed(114514)
+```
+
+We know the number of games that the Braves win in the best-of-7 is a random variable obeying a binomial distribution. We could use the function rbinom() in R to generate a random value obeying this distribution. If the Braves win equal to or more than 4 games, they win the World Series. Thus we could simulate the probability as below:
+```{r sim without}
+# simulation without home-field advantage
+simulate_without <- function(p_b, size=1000000) {
+  sum(rbinom(size,7,p_b)>=4)/size
+}
+```
+
+The size of the simulation is default one million. To this question the answer is:
+```{r q2 a1}
+# Partial answer to question2
+(
+  answer2_without <-simulate_without(p_b = p_b) # p_b = 0.55 
+)
+```
+
+### With home-field advantage
+
+Taking home-field advantage into consideration, we need to divide the seven games into two groups, three in ATL and three in NYC. Still we know in Question 1 that B<sub>H</sub> obeys a binomial distribution with size 3 and p P<sub>B</sub><sup>H</sup>, and B<sub>A</sub> obeys a binomial distribution with size 4 and p P<sub>B</sub><sup>A</sup>. The simulation could be given as below, and the size is default one million:
+
+```{r sim with}
+# simulation with home-field advantage
+simulate_with <- function(p_b, H, size = 1000000) {
+  p_b_h <- p_b * H
+  p_b_a <- 1 - (1-p_b)*H
+  sum(rbinom(size, 3, p_b_h) + rbinom(size, 4, p_b_a) >= 4)/size
+}
+```
+
+The answer to question 2 could be given as:
+```{r q2 a2}
+(
+  answer2_with <- simulate_with(p_b = p_b, H = H)
+)
+```
+
+The difference is:
+```{r q2 a3}
+(
+  answer2_difference <- abs(answer2_without - answer2_with)
+)
+```
+
+# Question 3: What is the absolute and relative error for your simulation in the previous question?
+
+The concepts of the absolute and relative error is discussed in [02-monte-carlo-error](https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/tree/master/02-monte-carlo-error).
+
+> **Absolute Error** is the difference between the inferred value of the index we estimate and its actual value. That means, we do not change the scale of the value. Instead, we minus it immediately and take the absolute value.
+
+> **Relative Error** is obtained by dividing the absolute error by the actual value. It is used to figure out how large the absolute error is.
+
+Therefore, we have the answers to Question 3:
+```{r errors}
+# absolute error
+(
+  answer3_abserror_without <- abs(answer2_without - answer1_without)
+)
+(
+  answer3_abserror_with <- abs(answer2_with - answer1_with)
+)
+
+# relative error
+(
+  answer3_relerror_without <- answer3_abserror_without / answer1_without
+)
+(
+  answer3_relerror_with <- answer3_abserror_with / answer1_with
+)
+```
+
+The answers are merged into the table below:
+
+| Home-Field Advantage | Absolute Error | Relative Error |
+|:----:|:----:|:----:|
+| Without | 0.0002557969 | 0.0004205195 |
+| With | 0.0005060284 | 0.0008374889 |
+
+
+# Question 4: Does the difference in probabilities (with vs without home-field advantage) depend on P<sub>B</sub>? (Generate a plot to answer this question.)
+
+Let us use the methods we generate in the solution to Question 1. Defaultly the advantage multiplier is 1.1.
+
+
+First we generate a matrix recording the data we need:
+```{r matrix}
+# Initialize an empty matrix
+answer4_matrix <- data.frame(matrix(NA,81,0))
+```
+
+Then, we generate a sequence of values of P<sub>B</sub>. Be aware that as any P should not be larger than 1 or less than 0, we have to limit our sequence size.
+```{r q_b seq}
+# set values of p_b
+answer4_matrix$pb <- seq(0.1, 0.9, 0.01)
+```
+
+We calculate the probabilities with and without home-field advantage:
+```{r q4 matrix}
+# calculate the probabilities
+answer4_matrix$Without <- p_without(answer4_matrix$pb)
+answer4_matrix$With <- p_with(answer4_matrix$pb, H=1.1)
+answer4_matrix$difference <- answer4_matrix$With - answer4_matrix$Without
+```
+
+And then we draw the plot:
+```{r q4 plot}
+# difference in probabilities
+(
+  answer4_plot <- ggplot(
+                    answer4_matrix,
+                    aes(
+                      x = pb,
+                      y = difference
+                    )
+                  ) +
+                  geom_point(
+                    size = 0.5
+                  ) +
+                  scale_x_continuous(
+                    breaks = seq(0.1, 0.9, 0.1)
+                  ) +
+                  labs(
+                    title = 'Difference in Probabilities (with vs without) and P_B',
+                    x = 'P_B',
+                    y = 'Difference in Probabilities'
+                  ) +
+                  theme_bw()
+)
+```
+
+We could know from the plot that:
+
+> The difference in probabilities (with vs without home-field advantage) **depends** on P<sub>B</sub>
+
+# Question 5: Does the difference in probabilities (with vs without home field advantage) depend on the advantage factor?
+
+Similar to the solution to Question 4, we generate a matrix recording the data we need:
+```{r q5 matrix}
+# Initialize an empty matrix
+answer5_matrix <- data.frame(matrix(NA, 81, 0))
+```
+
+Then, we generate a sequence of values of H. As we know, any P won't be larger than 1 or less than 0, so the edges of the sequence is limited. P<sub>B</sub> is defaultly 0.55.
+```{r H seq}
+# set values of H
+answer5_matrix$h <- seq(1, 1.8, 0.01)
+```
+
+We calculate the probabilities with and without home-field advantage:
+```{r q5 calculation}
+# calculate the probabilities
+answer5_matrix$Without <- p_without(p_b = 0.55)
+answer5_matrix$With <- p_with(p_b = 0.55, H = answer5_matrix$h)
+answer5_matrix$difference <- answer5_matrix$With - answer5_matrix$Without
+```
+
+And then we draw the plot:
+```{r q5 plot}
+# difference in probabilities with respect to H
+(
+  answer5_plot <- ggplot(
+                    answer5_matrix,
+                    aes(
+                      x = h,
+                      y = difference
+                    )
+                  ) +
+                  geom_point(
+                    size = 0.5
+                  ) +
+                  scale_x_continuous(
+                    breaks = seq(1, 1.8, 0.1)
+                  ) +
+                  labs(
+                    title = 'Difference in Probabilities (with vs without) and Advantage Factor',
+                    x = 'Advantage Factor',
+                    y = 'Difference in Probabilities'
+                  ) +
+                  theme_bw()
+)
+```
+
+Absolutely **YES**.
+
+> The difference in probabilities (with vs without home field advantage) depends on the advantage factor.
+
+
+
+
+
+# Reference Links
