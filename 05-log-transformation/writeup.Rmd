@@ -1,0 +1,469 @@
+---
+title: "Log Transformation"
+author: "Shuyang Lin"
+date: "10/7/2021"
+output: html_document
+---
+```{r include=F}
+library('ggplot2')
+library('tidyverse')
+set.seed(1)
+knitr::opts_chunk$set(results='asis', cache=TRUE)
+```
+
+# Introduction
+
+It is common in the analysis of biological data to log transform data representing concentrations or data representing dose response^[[05-log-transformation.md](https://github.com/thomasgstewart/data-science-5620-fall-2021/blob/master/deliverables/05-log-transformation.md)].
+
+Log transformation is a data transformation method. We replace the variable <i>X</i> with a log(<i>X</i>). Commonly we have three choices for bases:
+
++ Base **2**, especially connected to binary integers.
+
++ Base **10**, usually when we only care about the magnitude.
+
++ **Euler's number**, or marked **<i>e</i>**, when we defaultly use natural logarithm.
+
+The choice of the logarithm base is subject to the particular purposes of statistical modeling and left up to the data scientist in charge.
+
+In the real world, a lot of random variables follow or similarly follow a normal distribution. However, some of the others may follow the log-normal distribution instead.
+
+A **log-normal distribution** is a continuous probability distribution of a random variable whose logarithm is normally distributed^[[Log-normal distribution -From Wikipedia](https://en.wikipedia.org/wiki/Log-normal_distribution)]. 
+
+When performing statistical modeling, especially regressions or variance analyses, we need to confirm the normality of the dependent variables; otherwise, the research will become biased and useless. Therefore, if we meet data distributes like the following figure^[[Show the Distribution with Histograms](https://www.dummies.com/education/science/biology/show-the-distribution-with-histograms/)], a log transformation will be helpful to fulfill the requirements of statistical analysis.
+
+![An example of histogram showing demand of log transformation](https://www.dummies.com/wp-content/uploads/439734.image1.jpg)
+
+# Part 1: Log Transformation of Three Distributions
+
+To show the power of logarithm transformation, this blog will introduce three distributions:
+
++ **Gamma distribution**: <i>X</i> ∼ GAMMA(shape = 3, scale = 1)
+
++ **Log normal distribution**: <i>X</i> ∼ LOG NORMAL(μ = −1, σ = 1)
+
++ **Uniform distribution**: <i>X</i> ~ UNIFORM(0, 12)
+
+By using log transformations, they will be transformed into a distribution that is similar to a normal distribution, which is useful as preparation for statistical modeling.
+
+Tasks to be done later:
+
++ For each distribution above, generate a figure of the PDF and CDF. Mark the mean and median in the figure.
+
++ For each distribution above, generate a figure of the PDF and CDF of the transformation Y = log(X) random variable. Mark the mean and median in the figure.
+
++ For each of the distributions above, generate 1000 samples of size 100. For each sample, calculate the geometric and arithmetic mean. Generate a scatter plot of the geometric and arithmetic sample means. Add the line of identify as a reference line.
+
++ Generate a histogram of the difference between the arithmetic mean and the geometric mean.
+
+### Gamma Distribution
+
+Let us set the shape as 3 and the scale as 1, we know the mean of Gamma distribution is given by shape multiplying scale.
+
+```{r gamma pdf}
+(
+  ggplot() + 
+    geom_line(aes(x = seq(0, 20, 1/10000), y = dgamma(seq(0, 20, 1/10000), 3, 1))) + 
+    geom_vline(xintercept = 3, color = 'red') +
+    geom_vline(xintercept = qgamma(.5, 3, 1), color = 'blue') +
+    geom_text(aes(x = 3, y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = qgamma(.5, 3, 1), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(title = 'PDF of Gamma Distribution', x="", y="") +
+    theme_bw()
+)
+```
+
+The figure above is the PDF of the Gamma distribution.
+
+```{r gamma cdf}
+(
+  ggplot() + 
+    geom_line(aes(x = seq(0, 20, 1/10000), y = pgamma(seq(0, 20, 1/10000), 3, 1))) + 
+    geom_vline(xintercept = 3, color = 'red') +
+    geom_vline(xintercept = qgamma(.5, 3, 1), color = 'blue') +
+    geom_text(aes(x = 3, y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = qgamma(.5, 3, 1), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(title = 'CDF of Gamma Distribution', x="", y="") +
+    theme_bw()
+)
+```
+
+The figure above is the CDF of the Gamma distribution.
+
+From these two plots we could see the mean and the median is not the same, and the density reached the peak before both median and mean.
+
+Next we generate a sample of the Gamma distribution with the size one million and do the log transformation.
+```{r log gamma}
+gamma_log <- log(rgamma(1000000, 3, 1))
+```
+
+Next we draw the two plots again:
+
+```{r log gamma pdf}
+(
+  ggplot() + 
+    geom_density(aes(x = gamma_log)) + 
+    geom_vline(xintercept = log(3), color = 'red') +
+    geom_vline(xintercept = log(qgamma(.5, 3, 1)), color = 'blue') +
+    geom_text(aes(x = log(3), y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = log(qgamma(.5, 3, 1)), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(
+      title = 'PDF of log(Gamma Distribution)',
+      x="",
+      y=""
+    ) +
+    theme_bw()
+)
+```
+
+
+```{r log gamma cdf}
+(
+  ggplot() + 
+    stat_ecdf(aes(x = gamma_log)) + 
+    labs(
+      title = 'CDF of log(Gamma Distribution)',
+      x="",
+      y=""
+    ) + 
+    geom_vline(xintercept = log(3), color = 'red') +
+    geom_vline(xintercept = log(qgamma(.5, 3, 1)), color = 'blue') +
+    geom_text(aes(x = log(3), y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = log(qgamma(.5, 3, 1)), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    theme_bw()
+)
+```
+
+After a log transformation, the data follows similarly normal distribution, but we should remember that it is still not a normal distribution because the mean is not equal to the median.
+
+Now let us generate the arithmetic mean and the geometric mean of 1000 samples of size 100.
+Knowing there is a equation of geometric mean:
+
+> Let G be the geometric mean, we have ln(G) = ln(prod of all X)/n = (sum of ln(X))/n
+
+The code is as below:
+```{r}
+g_mean <- function(x) {
+  exp(mean(log(x)))
+}
+
+gamma_metrix <- data.frame(matrix(NA, 1000,0))
+gamma_sample <- data.frame(replicate(1000, rgamma(100,3,1)))
+gamma_metrix$arithmetic <- sapply(gamma_sample, mean)
+gamma_metrix$geometric <- sapply(gamma_sample, g_mean)
+```
+
+And we draw the scatterplot with a reference line y = x:
+```{r}
+ggplot(gamma_metrix) +
+  geom_point(aes(x=arithmetic, y=geometric), shape=21) +
+  geom_abline(slope=1, intercept=0) +
+  geom_text(aes(x=2.7, y=2.75, label='y = x'), angle=31) +
+  labs(title = 'Scatterplot of Arithmetic Mean vs Geometric Mean',
+       x = 'Arithmetic Mean',
+       y = 'Geometric Mean')
+```
+
+Further more, we could generate the histogram of the difference between the arithmetic mean and the geometric mean.
+```{r}
+gamma_metrix$diff <- gamma_metrix$arithmetic - gamma_metrix$geometric
+
+ggplot() +
+  geom_histogram(gamma_metrix, mapping = aes(x=diff)) +
+  labs(title = 'Histogram of Difference between Arithmetic Mean and Geometric Mean',
+       x='Difference between Arithmetic Mean and Geometric Mean',
+       y='Count')
+```
+
+We could find that the arithmetic mean has a strong positive correlation with 
+the geometric mean. Meanwhile, the difference between them seems to follow a normal distribution with a mean near 0.47.
+
+
+### Log Normal Distribution
+
+Let us set the μ = −1 and σ = 1, we know the mean of a log normal distribution is given by the following formula:
+
+![](https://wikimedia.org/api/rest_v1/media/math/render/svg/6f846988b0bacae97fd6c0729c2548f648a54cf0)
+
+```{r lnorm pdf}
+(
+  ggplot() + 
+    geom_line(aes(x = seq(0, 5, 1/10000), y = dlnorm(seq(0, 5, 1/10000), -1, 1))) + 
+    geom_vline(xintercept = exp(-1 + 0.5), color = 'red') +
+    geom_vline(xintercept = qlnorm(.5, -1, 1), color = 'blue') +
+    geom_text(aes(x = exp(-1+0.5), y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = qlnorm(.5, -1, 1), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(title = 'PDF of Log-normal Distribution', x="", y="") +
+    theme_bw()
+)
+```
+
+The figure above is the PDF of the log-normal distribution.
+
+```{r lnorm cdf}
+(
+  ggplot() + 
+    geom_line(aes(x = seq(0, 5, 1/10000), y = plnorm(seq(0, 5, 1/10000), -1, 1))) + 
+    geom_vline(xintercept = exp(-1+0.5), color = 'red') +
+    geom_vline(xintercept = qlnorm(.5, -1, 1), color = 'blue') +
+    geom_text(aes(x = exp(-.5), y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = qlnorm(.5, -1, 1), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(title = 'CDF of Log-normal Distribution', x="", y="") +
+    theme_bw()
+)
+```
+
+The figure above is the CDF of the log-normal distribution.
+
+From these two plots we could see the mean and the median is not the same, and the density reached the peak before both median and mean.
+
+Next we generate a sample of the log-normal distribution with the size one million and do the log transformation.
+```{r log lnorm}
+lnorm_log <- log(rlnorm(1000000, -1, 1))
+```
+
+Next we draw the two plots again:
+
+```{r log lnorm pdf}
+(
+  ggplot() + 
+    geom_density(aes(x = lnorm_log)) + 
+    geom_vline(xintercept = -.5, color = 'red') +
+    geom_vline(xintercept = log(qlnorm(.5, -1, 1)), color = 'blue') +
+    geom_text(aes(x = -.5, y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = log(qlnorm(.5, -1, 1)), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(
+      title = 'PDF of log(Log-normal Distribution)',
+      x="",
+      y=""
+    ) +
+    theme_bw()
+)
+```
+
+
+```{r log lnorm cdf}
+(
+  ggplot() + 
+    stat_ecdf(aes(x = lnorm_log)) + 
+    labs(
+      title = 'CDF of log(Log-normal Distribution)',
+      x="",
+      y=""
+    ) + 
+    geom_vline(xintercept = -.5, color = 'red') +
+    geom_vline(xintercept = log(qlnorm(.5, -1, 1)), color = 'blue') +
+    geom_text(aes(x = -.5, y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = log(qlnorm(.5, -1, 1)), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    theme_bw()
+)
+```
+
+After a log transformation, the data follows similarly normal distribution. However, we should remember that since the value of log normal distribution won't be less than 0, the distribution is skewed, therefore the mean is still not equal to the median.
+
+Now let us generate the arithmetic mean and the geometric mean of 1000 samples of size 100.
+
+The code is as below:
+```{r}
+lnorm_metrix <- data.frame(matrix(NA, 1000,0))
+lnorm_sample <- data.frame(replicate(1000, rlnorm(100,-1,1)))
+lnorm_metrix$arithmetic <- sapply(lnorm_sample, mean)
+lnorm_metrix$geometric <- sapply(lnorm_sample, g_mean)
+```
+
+And we draw the scatterplot with a reference line y = x:
+```{r}
+ggplot(lnorm_metrix) +
+  geom_point(aes(x=arithmetic, y=geometric), shape=21) +
+  geom_abline(slope=1, intercept=0) +
+  geom_text(aes(x=0.43, y=0.45, label='y = x'), angle=57) +
+  labs(title = 'Scatterplot of Arithmetic Mean vs Geometric Mean',
+       x = 'Arithmetic Mean',
+       y = 'Geometric Mean')
+```
+
+Further more, we could generate the histogram of the difference between the arithmetic mean and the geometric mean.
+```{r}
+lnorm_metrix$diff <- lnorm_metrix$arithmetic - lnorm_metrix$geometric
+
+ggplot() +
+  geom_histogram(lnorm_metrix, mapping = aes(x=diff)) +
+  labs(title = 'Histogram of Difference between Arithmetic Mean and Geometric Mean',
+       x='Difference between Arithmetic Mean and Geometric Mean',
+       y='Count')
+```
+
+We could find that the arithmetic mean has a strong positive correlation with 
+the geometric mean. Meanwhile, the difference between them seems to follow a normal distribution with a mean near 0.23.
+
+
+### Uniform Distribution
+
+Let us set the interval of the uniform distribution as [0, 12], we know the mean and the median of a log normal distribution are both the mid point of the interval.
+
+```{r unif pdf}
+(
+  ggplot() + 
+    geom_line(aes(x = seq(-2, 14, 1/10000), y = dunif(seq(-2, 14, 1/10000), 0, 12))) + 
+    geom_vline(xintercept = 6, color = 'red', alpha = 0.5) +
+    geom_vline(xintercept = 6, color = 'blue', alpha = 0.5) +
+    geom_text(aes(x = 6, y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = 6, y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(title = 'PDF of Uniform Distribution', x="", y="") +
+    theme_bw()
+)
+```
+
+The figure above is the PDF of the uniform distribution.
+
+```{r unif cdf}
+(
+  ggplot() + 
+    geom_line(aes(x = seq(-2, 14, 1/10000), y = punif(seq(-2, 14, 1/10000), 0, 12))) + 
+    geom_vline(xintercept = 6, color = 'red', alpha = 0.5) +
+    geom_vline(xintercept = 6, color = 'blue', alpha = 0.5) +
+    geom_text(aes(x = 6, y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = 6, y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(title = 'CDF of Uniform Distribution', x="", y="") +
+    theme_bw()
+)
+```
+
+The figure above is the CDF of the uniform distribution.
+
+Next we generate a sample of the uniform distribution with the size one million and do the log transformation.
+```{r log unif}
+unif_log <- log(runif(1000000, 0, 12))
+```
+
+Next we draw the two plots again:
+
+```{r log unif pdf}
+(
+  ggplot() + 
+    geom_density(aes(x = unif_log)) + 
+    geom_vline(xintercept = log(6), color = 'red', alpha=0.5) +
+    geom_vline(xintercept = log(6), color = 'blue', alpha=.5) +
+    geom_text(aes(x = log(6), y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = log(6), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    labs(
+      title = 'PDF of log(Uniform Distribution)',
+      x="",
+      y=""
+    ) +
+    theme_bw()
+)
+```
+
+
+```{r log unif cdf}
+(
+  ggplot() + 
+    stat_ecdf(aes(x = unif_log)) + 
+    labs(
+      title = 'CDF of log(Uniform Distribution)',
+      x="",
+      y=""
+    ) + 
+    geom_vline(xintercept = log(6), color = 'red', alpha=.5) +
+    geom_vline(xintercept = log(6), color = 'blue', alpha=.5) +
+    geom_text(aes(x = log(6), y = 0.05, label = 'Mean'), color = 'red', angle = 90, vjust = 1.5) +
+    geom_text(aes(x = log(6), y = 0.05, label = 'Median'), color = 'blue', angle = 90, vjust = -0.5) +
+    theme_bw()
+)
+```
+
+After a log transformation, the data became skewed.
+
+Now let us generate the arithmetic mean and the geometric mean of 1000 samples of size 100.
+
+The code is as below:
+```{r}
+unif_metrix <- data.frame(matrix(NA, 1000,0))
+unif_sample <- data.frame(replicate(1000, runif(100,0,12)))
+unif_metrix$arithmetic <- sapply(unif_sample, mean)
+unif_metrix$geometric <- sapply(unif_sample, g_mean)
+```
+
+And we draw the scatterplot with a reference line y = x:
+```{r}
+ggplot(unif_metrix) +
+  geom_point(aes(x=arithmetic, y=geometric), shape=21) +
+  geom_abline(slope=1, intercept=0) +
+  geom_text(aes(x=5, y=5.2, label='y = x'), angle=29) +
+  labs(title = 'Scatterplot of Arithmetic Mean vs Geometric Mean',
+       x = 'Arithmetic Mean',
+       y = 'Geometric Mean')
+```
+
+Further more, we could generate the histogram of the difference between the arithmetic mean and the geometric mean.
+```{r}
+unif_metrix$diff <- unif_metrix$arithmetic - unif_metrix$geometric
+
+ggplot() +
+  geom_histogram(unif_metrix, mapping = aes(x=diff)) +
+  labs(title = 'Histogram of Difference between Arithmetic Mean and Geometric Mean',
+       x='Difference between Arithmetic Mean and Geometric Mean',
+       y='Count')
+```
+
+We could find that the arithmetic mean has a strong positive correlation with 
+the geometric mean. Meanwhile, the difference between them seems to follow a normal distribution with a mean near 1.5.
+
+# Part 2: If <i>X<sub>i</sub></i> > 0 for all <i>i</i>, mean(<i>X</i>) >= g_mean(<i>X</i>)
+
+From part 1 we found that the arighmetic mean is greater than or equal to the geometric mean, when <i>X</i> is always greater than 0.
+
+Further more, we could prove it by formula:
+
+$$G_n = \sqrt[n]{\prod_{i=1}^{n}X_i}$$
+
+$$A_n = \frac{\sum_{i=1}^nX_i}{n}$$
+
+When $n = 1$, $G_1 = A_1 = X_1$
+
+When $n = 2$,
+
+$$A_2^2 = (\frac{X_1 + X_2}{2})^2 = \frac{X_1^2 + 2X_1X_2 + X_2^2}{4} = \frac{(X_1 - X_2)^2 + 4X_1X_2}{4} \geq \frac{4X_1X_2}{4} = G_2^2$$
+
+Now if we assume when $n = k$, $A_n \geq G_n$, we have $(\frac{X_1 + X_2 + \cdots + X_n}{n})^n \geq X_1X_2 \cdots X_n$
+
+Then for $n = k + 1$, let $S = A_k*k$, and we assume $X_{k+1}$ is the largest one among $X_1$ to $X_{k+1}$
+
+According to the Binomial theorem, we have
+$(A + B)^n \geq A^n + nA^{n-1}B$
+
+Then We have
+$$
+\begin{align}
+A_{k+1}^{k+1} &= (\frac{X_1 + X_2 + \cdots + X_k + X_{k+1}}{k+1})^{k+1} \\
+&= (\frac{S + X_{k+1}}{k+1})^{k+1}\\
+&= (A_k + \frac{kX_{k+1} - S}{k(k+1)})^{k+1}\\
+&\geq A_k^{k+1} + (k+1)A_k^k\frac{kX_{k+1}-S}{k(k+1)}\\
+&= A_k^k(\frac{S}{k} + \frac{kX_{k+1}-S}{k})\\
+&= A_k^kX_{k+1}\\
+&\geq X_1X_2 \cdots X_k X_{k+1}\\
+&= G_{k+1}^{k+1}
+\end{align}
+$$
+
+Therefore, we know for every $i$, if $X_i > 0$, we have $A_n \geq G_n$.
+
+# Part 3: Relation between E[log(X)] and log[E(X)]
+
+It is similar to the proof of Part 2. The condition is that $X > 0$.
+
+Since we know $log(X+1) \leq X$, we have
+$$
+\begin{align}
+E[log(X)] &= E\{log(X) - log[E(X)] + log[E(X)]\}\\
+&= E\{log[\frac{X}{E(X)}] + log[E(X)]\}\\
+&= E\{log[\frac{X-E(X)}{E(X)}+1] + log[E(X)]\}\\
+&\leq E[\frac{X-E(X)}{E(X)} + log[E(X)]\\
+&= log[E(X)]
+\end{align}
+$$
+Therefore, if all $X > 0$, we have $log[E(X)] \geq E[log(X)]$.
+
+Q.E.D
+
+# Reference Links
