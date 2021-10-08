@@ -10,3 +10,5 @@ Repo for deliverables of 5620 prob
 03-discrete-probability-calculations: https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/blob/master/03-discrete-probability-calculations
 
 ec1-birthday-problem: https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/tree/master/ec1-birthday-problem
+
+04-home-field-advantage: https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/tree/master/04-home-field-advantage
