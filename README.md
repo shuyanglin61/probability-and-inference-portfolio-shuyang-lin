@@ -1,5 +1,5 @@
 # probability-and-inference-portfolio-shuyang-lin
-This is a repository for Shuyang Lin's deliverables for DS 5620 Probability and Inference Portfolio in Fall 2021 at Vanderbilt University.
+This is a repository for Shuyang Lin's deliverables for DS 5620 Probability and Statistical Inference in Fall 2021 at Vanderbilt University.
 
 [01-roulette-simulation](https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/blob/master/01-roulette-simulation)
 
