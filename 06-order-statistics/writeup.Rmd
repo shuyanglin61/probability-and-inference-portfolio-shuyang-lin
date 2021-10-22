@@ -1,0 +1,216 @@
+---
+title: "06-order-statistics"
+author: "Shuyang Lin"
+date: "10/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=F,message=F}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+```
+
+# Which quantiles of a continuous distribution can one estimate with more precision?
+
+The median is an important quantity in data analysis. It represents the
+middle value of the data distribution. Estimates of the median, however,
+have a degree of uncertainty because (a) the estimates are calculated
+from a finite sample and (b) the data distribution of the underlying
+data is generally unknown. One important roles of a data scientist is to
+quantify and to communicate the degree of uncertainty in his or her data
+analysis.
+
+# Background Knowledge
+
+
+
+# Solutions to Questions
+
++ **Q1: Begin with the median from a sample of N = 200 from the standard normal distribution. Write an R function that is the density function for the median in this sample. Note that the 100th order statistic is approximately the median, and use the order statistic formula discussed in class. Generate a plot of the function.**
+
+The function could be given by the PDF of the order statistics:
+
+$$ f_{X_{(k)}}(x) = kC_n^k f_X(x)[F_X(x)]^{k-1}[1-F_X(x)]^{n-k} $$
+
+Where $k=100$, $n=200$, $f_X(x)$ is the PDF of the standard normal distribution and $F_X(x)$ is the CDF.
+
+```{r dorder}
+dorder <- function(x){
+  100*choose(200, 100)*pnorm(x)^99*(1-pnorm(x))^100*dnorm(x)
+}
+```
+
+And we draw the plot of it:
+```{r dorder plot}
+sample <- data.frame(seq(-1,1,0.001))
+colnames(sample) <- c('median')
+sample$dorder <- dorder(sample$median)
+(
+  dorder_plot <- ggplot(sample, aes(x=median, y=dorder)) + geom_line() + theme_bw() +
+                labs(
+                  title = 'PDF of Median from A Sample of Size 200 from the Standard Normal Distribution',
+                  x = 'X(100)',
+                  y = 'Density'
+                )
+)
+```
+
+
++ **Q2: Write an R function that is the probability function for the median in this sample. Use the order statistic formula discussed in class. Generate a plot of the function.**
+
+The CDF is also given by the PDF of the order statistics:
+
+$$F_{X_{(r)}}(x) = \sum_{i=k}^{n}C_n^k[F_X(x)]^i[1-F_X(x)]^{n-i}$$
+
+Where $k=100$, $n=200$, and $F_X(x)$ is the CDF of the standard normal distribution. In fact, it is a binomial distribution with the $p$ given by the PDF of the standard normal distribution (marked as $P(X\leq k)$):
+$$ F_{X_{(r)}}(x) = P(X\geq k) = 1 - P(X \leq k-1)$$
+The Code is:
+```{r porder}
+porder <- function(x){
+  1 - pbinom(99, 200, pnorm(x))
+}
+
+# draw the plot
+sample$porder <- porder(sample$median)
+(
+  porder_plot <- ggplot() + geom_line(sample, mapping = aes(x=median, y=porder)) + theme_bw() +
+                labs(
+                  title = 'CDF of Median from A Sample of Size 200 from the Standard Normal Distribution',
+                  x = 'X(100)',
+                  y = 'Cumulative Probability'
+                )
+)
+```
+
++ **Q3: Write an R function that is the quantile function for the median in this sample. (You have several options for how to write this function.) Generate a plot of the function.**
+
+We know the quantile function is the inverse function of PDF. Therefore, we solve the equation that is given the quantile $p$ and regards the medians as unknown:
+$$ F_{X_{(r)}}(x) = p $$
+
+Here we could introduce the uniroot() function in R. It could help us solve the equation in a given interval, which could be [-100, 1] in our case.
+```{r qorder}
+qorder <- function(p){
+  uniroot(function(x){porder(x) - p}, c(-100, 100))$root
+}
+
+# draw the plot
+qsample <- data.frame(seq(0.01,0.99,0.001))
+colnames(qsample) <- c('q')
+qsample$median <- sapply(qsample$q, qorder)
+(
+  qorder_plot <- ggplot() + geom_line(qsample, mapping = aes(x=q,y=median)) + theme_bw() +
+                labs(
+                  title = 'Quantile Function of Median from A Sample of Size 200 from the Standard Normal Distribution',
+                  x = 'Probability',
+                  y = 'X(100)'
+                )
+)
+```
+
++ **Q4: Simulate the sampling distribution for the median. Create a plot of the empirical CDF (ECDF). Overlay the plot of the ECDF with a plot of the CDF.**
+
+We first generate 10,000 samples of size 200, and record their median, then we draw the plot using stat_ecdf() function in ggplot2:
+```{r sample}
+set.seed(1)
+medsample <- sapply(lapply(matrix(200,10000,1), rnorm),median)
+
+# draw the plot
+(
+  medsample_plot <- ggplot() +
+    geom_line(aes(x=seq(-0.3, 0.3, 0.001), y=porder(seq(-0.3, 0.3, 0.001))), alpha = 0.5, color = 'blue') + geom_text(aes(x=-0.02, y = 0.55), angle = 55, label = 'Analytic CDF',color = 'blue')+
+    theme_bw() + 
+    stat_ecdf(aes(x=medsample), color = 'red', alpha = 0.5) +
+    geom_text(aes(x=0.02, y = 0.45), angle= 55,label = 'Simulation ECDF', color = 'red')+
+    labs(
+      title = 'CDF vs ECDF of Median from A Sample of Size 200 from\nthe Standard Normal Distribution',
+      x = 'X(100)',
+      y = 'Cumulative Probability'
+    ) +
+    scale_x_continuous()
+)
+```
+
++ **Q5: Using the simulated sampling distribution from the previous question, create a histogram (on the density scale). Overlay the histogram with a plot of the density function.**
+
+The plot is given by the code below:
+```{r}
+(
+  medsample_plot2 <- ggplot() + 
+                geom_line(
+                  aes(
+                    x=seq(min(medsample),max(medsample),0.001),
+                    y = dorder(seq(min(medsample),max(medsample),0.001))
+                  ),
+                  color='blue'
+                )+ 
+                geom_histogram(
+                  aes(x=medsample, y =..density..),
+                  color = 'red', fill=NA
+                )+
+                theme_bw() +
+                labs(
+                  title = 'PDF(blue) vs Histogram(red) of Median from A Sample of Size 200\nfrom the Standard Normal Distribution',
+                  x = 'X(100)',
+                  y = 'Density'
+                )
+)
+```
+
++ **Q6: One very common way to compare a random sample to a theoretical candidate distribution is the QQ plot. It is created by ploting quantiles of the theoretical distribution on the x-axis and empirical quantiles from the sample on the y-axis.**
+
+**If sample and theoretical quantiles come from the same distribution, then the plotted points will fall along the line y = x, approximately. Here are two examples when the sample and theoretical quantiles came from the same distribution.**
+
+```{r q6}
+random_sample <- rexp(200)
+q_candidate <- qexp
+
+x <- q_candidate((1:200)/200)
+y <- quantile(random_sample, probs = (1:200)/200)
+
+svg("./assets/exponential-qq.svg", width = 5, height = 3)
+tgsify::plotstyle(style = upright)
+plot(x,y, asp = 1)
+abline(0,1)
+dev.off()
+```
+```{r q62}
+random_sample <- rnorm(200)
+q_candidate <- qnorm
+
+x <- q_candidate((1:200)/200)
+y <- quantile(random_sample, probs = (1:200)/200)
+
+svg("./assets/normal-qq.svg", width = 5, height = 3)
+tgsify::plotstyle(style = upright)
+plot(x,y, asp = 1, xlab = "Theoretical quantile", ylab = "Sample quantile")
+abline(0,1)
+dev.off()
+```
+
+**Here is an example when the sample distribution does not match with the theoretical distribution. The sample distribution is t3 where as the theoretical distribution is N(0, 1). Notice the deviation from y = x.**
+
+```{r}
+random_sample <- rt(200, df = 3)
+q_candidate <- qnorm
+
+x <- q_candidate((1:200)/200)
+y <- quantile(random_sample, probs = (1:200)/200)
+
+svg("./assets/t-normal-qq.svg", width = 5, height = 3)
+tgsify::plotstyle(style = upright)
+plot(x,y, asp = 1, xlab = "Theoretical quantile", ylab = "Sample quantile")
+abline(0,1)
+dev.off()
+```
+
+**The deviation occurs despite the fact that the two distributions are similar.For the assignment, generate a QQ plot for the simulated data of the median relative to the known sampling distribution of the median.Does the simulated data agree with the theoretical sampling distribution?**
+
+
+Q: Modify the dorder, porder, and qorder functions so that the functions take a new parameter k (for the kt**h order statistic) so that the functions will work for any order statistic and not just the median.
+
+Q: Generate the QQ plot for simulated data from the sampling distribution of the sample max and the theoretical largest order statistic distribution.
+
+Q: Modify the dorder, porder, and qorder functions so that the functions take new parameters dist and ... so that the functions will work for any continuous distribution that has d and p functions defined in R.
+
+Q: Use the newly modified functions to plot the probability and density functions for the sample min (N = 200).
