@@ -2,7 +2,9 @@
 title: "06-order-statistics"
 author: "Shuyang Lin"
 date: "10/21/2021"
-output: html_document
+output: 
+  html_document: default
+  github_document: default
 ---
 
 ```{r setup, include=FALSE, warning=F,message=F}
@@ -67,6 +69,7 @@ sample$dorder <- dorder(sample$median)
 )
 ```
 
+From the plot, we can see that the distribution of the sample's median is symmetrical around 0. That is reasonable and apparent because the median of the population is 0. Although the sample's median is random, it still should stick to 0 and follow a distribution similar to the normal distribution. In fact, I didn't learn anything new from this plot.
 
 + **Q2: Write an R function that is the probability function for the median in this sample. Use the order statistic formula discussed in class. Generate a plot of the function.**
 
@@ -94,6 +97,8 @@ sample$porder <- porder(sample$median)
 )
 ```
 
+The CDF plot shows nearly nothing new compared to the PDF. It shows the distribution of the 100th order statistic, which is the sample's median.
+
 + **Q3: Write an R function that is the quantile function for the median in this sample. (You have several options for how to write this function.) Generate a plot of the function.**
 
 We know the quantile function is the inverse function of PDF. Therefore, we solve the equation that is given the quantile $p$ and regards the medians as unknown:
@@ -119,6 +124,8 @@ qsample$median <- sapply(qsample$q, qorder)
 )
 ```
 
+The function qorder() is the reverse function of porder(). If we do an axisymmetric with the bottom left to top right diagonal, the plot will become a cut of the plot of the CDF with X(100) in an interval around [-0.22, 0.22].
+
 + **Q4: Simulate the sampling distribution for the median. Create a plot of the empirical CDF (ECDF). Overlay the plot of the ECDF with a plot of the CDF.**
 
 We first generate 10,000 samples of size 200, and record their median, then we draw the plot using stat_ecdf() function in ggplot2:
@@ -141,6 +148,8 @@ medsample <- sapply(lapply(matrix(200,10000,1), rnorm),median)
     scale_x_continuous()
 )
 ```
+
+We may see that the analytic CDF and the simulation ECDF share the same trend. However, they are not exactly equal to the other. That is the inevitable deviation of simulations.
 
 + **Q5: Using the simulated sampling distribution from the previous question, create a histogram (on the density scale). Overlay the histogram with a plot of the density function.**
 
@@ -167,6 +176,8 @@ The plot is given by the code below:
                 )
 )
 ```
+
+The histogram is shown in density format. We could see that the simulation solution shares a similar trend with the analytic solution. However, since the histogram is built in left tail way, we could see that the density is not axisymmetric.
 
 + **Q6: One very common way to compare a random sample to a theoretical candidate distribution is the QQ plot. It is created by ploting quantiles of the theoretical distribution on the x-axis and empirical quantiles from the sample on the y-axis.**
 
@@ -273,7 +284,7 @@ Then we use qorder() to generate the theoretical largest order statistic, calcul
 )
 ```
 
-They are nearly the same.
+They are nearly the same, which means with a large size, sampling is good to straightly get an estimated value in most cases if a slight deviation is allowed.
 
 + **Q9: Modify the dorder, porder, and qorder functions so that the functions take new parameters dist and ... so that the functions will work for any continuous distribution that has d and p functions defined in R.**
 
@@ -336,5 +347,7 @@ We need to use dorder() for density:
                       theme_classic()
 )
 ```
+
+From the PDF's plot, we could see that the sample's X(1) distribution is not axisymmetric. That is fair because the population follows a standard normal distribution, which holds the value of the random variable being too far away from the mean. Therefore, since we have an expectation of X(1), X(1) is more likely to be larger than that expectation, compared to be smaller than. The CDF, shows a vague interval of the X(1) could be in.
 
 # Reference Links
