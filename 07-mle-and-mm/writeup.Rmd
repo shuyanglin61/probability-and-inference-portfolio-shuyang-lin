@@ -3,8 +3,8 @@ title: "07-mle-mm"
 author: "Shuyang Lin"
 date: "11/4/2021"
 output:
-  html_document: default
   github_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
