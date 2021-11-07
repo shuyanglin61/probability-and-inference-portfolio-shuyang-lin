@@ -68,7 +68,7 @@ the means and standard errors of the samples.
 For Gamma distribution, we could simply calculate the parameters with
 the formulas:
 
-$$ Shape = \\frac{xbar^2}{var}$$
+<img src="https://render.githubusercontent.com/render/math?math=Shape = \\frac{xbar^2}{var}">
 
 $$ Scale = \\frac{var^2}{xbar}$$
 
