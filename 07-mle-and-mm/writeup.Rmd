@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(Hmisc)
 library(ggplot2)
-
+library(stats4)
 ```
 
 # Introduction
@@ -127,7 +127,7 @@ We need to know if this variance function has monotonicity:
 ```
 
 Obviously we could get the solutions with function uniroot():
-```{r}
+```{r,results='asis'}
 (k_gh_hat <- uniroot(function(x){var_weibull_equation(xbar_gh, x)-var_gh}, c(1,100))$root)
 
 (lambda_gh_hat <- lambda(xbar_gh, k_gh_hat))
@@ -136,11 +136,12 @@ Obviously we could get the solutions with function uniroot():
 
 (lambda_ht_hat <- lambda(xbar_ht, k_ht_hat))
 ```
-## Esitmate medians
+
+## Estimate medians
 
 As we have the parameters, we could use "q" functions to get the estimated median.
 
-```{r}
+```{r, results='hold'}
 # gh
 
 cat("Median of Glycohemoglobin\n")
@@ -525,6 +526,521 @@ Next qq plot for the Height:
 
 Weibull distribution fits not well. The other two is good.
 
+# Maximum Likelihood
 
+Now we come to the Maximum Likelihood. To use this method, we need to create a likelihood function with known values and unknown parameters. The likelihood function is created by the following formula:
+
+$$ f(x_0, \theta) = \prod_i^n f(X=x_i, \theta) $$
+
+We need to maximize the production of the probability, which means we need to get the point that $f^`(x_0,\theta) = 0$. We have mle() function in R to solve this problem. It needs the production of the probability log-transformed.
+
+## Estimate parameters
+
++ Normal Distribution
+```{r,results='hold'}
+# normal
+norm_ll_gh <- function(mean, sd) {
+  p <- dnorm(d1$gh, mean, sd,log=T)
+  -sum(p)
+}
+
+norm_mle_gh <- coef(mle(
+  norm_ll_gh,
+  start=list(mean=xbar_gh,sd=sd_gh),
+  method='L-BFGS-B',
+  lower=c(0,0.01)
+))
+cat("MLE of normal distribution of Glycohemoglobin\n")
+cat("Mean:",norm_mle_gh[1],'\n')
+cat("Standard Deviation:",norm_mle_gh[2],'\n\n')
+
+
+norm_ll_ht <- function(mean, sd) {
+  p <- dnorm(d1$ht, mean, sd,log=T)
+  -sum(p)
+}
+
+norm_mle_ht <- coef(mle(
+  norm_ll_ht,
+  start=list(mean=xbar_ht,sd=sd_ht),
+  method='L-BFGS-B',
+  lower=c(0,0.01)
+))
+cat("MLE of normal distribution of Height\n")
+cat("Mean:",norm_mle_ht[1],'\n')
+cat("Standard Deviation:",norm_mle_ht[2],'\n')
+```
+
++ Gamma Distribution
+```{r,results='hold'}
+# gamma
+gamma_ll_gh <- function(shape, scale) {
+  p <- dgamma(d1$gh, shape=shape, scale=scale,log=T)
+  -sum(p)
+}
+
+gamma_mle_gh <- coef(mle(
+  gamma_ll_gh,
+  start=list(shape=shape_gh_hat,scale=scale_gh_hat),
+  method='L-BFGS-B',
+  lower=c(0,0.01)
+))
+cat("MLE of gamma distribution of Glycohemoglobin\n")
+cat("Shape:",gamma_mle_gh[1],'\n')
+cat("Scale:",gamma_mle_gh[2],'\n\n')
+
+
+gamma_ll_ht <- function(shape, scale) {
+  p <- dgamma(d1$ht, shape=shape, scale=scale,log=T)
+  -sum(p)
+}
+
+gamma_mle_ht <- coef(mle(
+  gamma_ll_ht,
+  start=list(shape=shape_ht_hat,scale=scale_ht_hat),
+  method='L-BFGS-B',
+  lower=c(0,0.01)
+))
+cat("MLE of gamma distribution of Height\n")
+cat("Shape:",gamma_mle_ht[1],'\n')
+cat("Scale:",gamma_mle_ht[2],'\n')
+```
+
+We could see that the MLE and MM results of Gamma Distribution of Glycohemoglobin differ from each other. It needs further discussion. 
+
++ Weibull Distribution
+
+```{r,results='hold'}
+# gamma
+weibull_ll_gh <- function(k, lambda) {
+  p <- dweibull(d1$gh, shape=k, scale=lambda,log=T)
+  -sum(p)
+}
+
+weibull_mle_gh <- coef(mle(
+  weibull_ll_gh,
+  start=list(k=k_gh_hat,lambda=lambda_gh_hat),
+  method='L-BFGS-B',
+  lower=c(0,0.01)
+))
+cat("MLE of Weibull distribution of Glycohemoglobin\n")
+cat("k:",weibull_mle_gh[1],'\n')
+cat("lambda:",weibull_mle_gh[2],'\n\n')
+
+
+weibull_ll_ht <- function(k, lambda) {
+  p <- dweibull(d1$ht, shape=k, scale=lambda,log=T)
+  -sum(p)
+}
+
+weibull_mle_ht <- coef(mle(
+  weibull_ll_ht,
+  start=list(k=k_ht_hat,lambda=lambda_ht_hat),
+  method='L-BFGS-B',
+  lower=c(0,0.01)
+))
+cat("MLE of Weibull distribution of Height\n")
+cat("k:",weibull_mle_ht[1],'\n')
+cat("lambda:",weibull_mle_ht[2],'\n')
+```
+
+They are not the same as the result of MM.
+
+## Estimate medians
+
+As we have the parameters, we could use "q" functions to get the estimated median too, as we've done before.
+
+```{r, results='hold'}
+# gh
+
+cat("Median of Glycohemoglobin\n")
+
+cat("Sample Median:",median(d1$gh),'\n')
+
+cat("Normal Distribution:",(mnorm_gh_mle <- qnorm(.5,norm_mle_gh[1],norm_mle_gh[2])),'\n')
+
+cat("Gamma Distribution:",(mgamma_gh_mle <- qgamma(.5, shape=gamma_mle_gh[1], scale=gamma_mle_gh[2])),'\n')
+
+cat("Weibull Distribution:",(mweibull_gh_mle <- qweibull(.5, weibull_mle_gh[1], weibull_mle_gh[2])),'\n')
+
+# ht
+cat("\nMedian of Height\n")
+
+cat("Sample Median:",median(d1$ht),'\n')
+
+cat("Normal Distribution:",(mnorm_ht_mle <- qnorm(.5,norm_mle_ht[1],norm_mle_ht[2])),'\n')
+
+cat("Gamma Distribution:",(mgamma_ht_mle <- qgamma(.5, shape=gamma_mle_ht[1], scale=gamma_mle_ht[2])),'\n')
+
+cat("Weibull Distribution:",(mweibull_ht_mle <- qweibull(.5, weibull_mle_ht[1], weibull_mle_ht[2])),'\n')
+```
+
+## Overlay estimated pdf onto histogram
+
+First one for Glycohemoglobin:
+```{r}
+(
+  pdf_gh_mle <- ggplot() +
+                geom_histogram(
+                  d1,
+                  mapping=aes(x=gh,y=..density..),
+                  breaks=seq(2,15,0.1),
+                  color='black',
+                  fill='grey'
+                ) +
+    geom_vline(xintercept = median(d1$gh),alpha=.5)+
+  # norm
+                geom_point(
+                  mapping = aes(
+                    x=seq(2, 15, 0.01), 
+                    y=dnorm(
+                        seq(2,15,0.01),
+                        mean=norm_mle_gh[1],
+                        sd=norm_mle_gh[2]
+                      ),
+                    color='Normal'
+                  ),
+                  alpha=.5
+                ) +
+    geom_vline(xintercept = mnorm_gh_mle,color='orange')+
+  # gamma
+                geom_point(
+                  mapping = aes(
+                    x=seq(2,15,0.01),
+                    y=dgamma(
+                        seq(2,15,0.01),
+                        shape=gamma_mle_gh[1],
+                        scale=gamma_mle_gh[2]
+                      ),
+                    color='Gamma'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mgamma_gh_mle,color='blue')+
+  # weibull
+                geom_point(
+                  mapping=aes(
+                    x=seq(2,15,0.01),
+                    y=dweibull(
+                      seq(2,15,0.01),
+                      weibull_mle_gh[1],
+                      weibull_mle_gh[2]
+                    ),
+                    color='Weibull'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mweibull_gh_mle,color='green')+
+                scale_color_manual(
+                  name='Model',
+                  breaks=c('Normal','Gamma','Weibull'),
+                  values=c('Normal'='orange','Gamma'='blue','Weibull'='green')
+                )+
+                labs(
+                  title = 'Histogram of Glycohemoglobin and Estimated PDF by MLE',
+                  x = 'Glycohemoglobin',
+                  y = 'Density',
+                  color = 'Model'
+                ) + theme_classic() + theme(legend.position='right')
+)
+
+```
+
+The empirical distribution is not axisymmetric, and the density is not so matched. Thus, the normal distribution seems to fit not so well either. Gamma distribution shares the same peak with the weibull distribution.
+
+```{r}
+(
+  pdf_ht_mle <- ggplot() +
+                geom_histogram(
+                  d1,
+                  mapping=aes(x=ht,y=..density..),
+                  breaks=seq(130,200,2),
+                  color='black',
+                  fill='grey'
+                ) + 
+    geom_vline(xintercept = median(d1$ht),alpha=.5)+
+  # norm
+                geom_point(
+                  mapping = aes(
+                    x=seq(130, 200, 0.1), 
+                    y=dnorm(seq(130, 200,0.1),
+                    mean=norm_mle_ht[1],
+                    sd=norm_mle_ht[2]
+                    ),
+                    color='Normal'
+                  ),
+                  alpha=.5
+                ) +
+    geom_vline(xintercept = mnorm_ht_mle,color='orange',alpha=.5)+
+  # gamma
+                geom_point(
+                  mapping = aes(
+                    x=seq(130, 200, 0.1), 
+                    y=dgamma(seq(130, 200,0.1),
+                    shape=gamma_mle_ht[1],
+                    scale=gamma_mle_ht[2]
+                    ),
+                    color='Gamma'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mgamma_ht_mle,color='blue',alpha=.5)+
+  # weibull
+                geom_point(
+                  mapping=aes(
+                    x=seq(130, 200, 0.1), 
+                    y=dweibull(seq(130, 200,0.1),
+                    shape=weibull_mle_ht[1],
+                    scale=weibull_mle_ht[2]
+                    ),
+                    color='Weibull'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mweibull_ht_mle,color='green')+
+                scale_color_manual(
+                  name='Model',
+                  breaks=c('Sample','Normal','Gamma','Weibull'),
+                  values=c('Sample'='black','Normal'='orange','Gamma'='blue','Weibull'='green')
+                )+
+                labs(
+                  title = 'Histogram of Height and Estimated PDF by MLE',
+                  x = 'Height',
+                  y = 'Density',
+                  color = 'Model'
+                ) + theme_classic() + theme(legend.position='right')
+)
+
+```
+
+The normal distribution and gamma distribution fits quite well! We could say that the Height is nearly following a normal distribution or gamma distribution too. Their estimate median is so close.
+
+## Overlay estimated CDF onto eCDF
+
+Next we try drawing the CDF of the :
+```{r}
+(
+  cdf_gh_mle <- ggplot() +
+                stat_ecdf(
+                  d1,
+                  mapping=aes(x=gh),
+                  color='black'
+                ) + 
+    geom_vline(xintercept = median(d1$gh),alpha=.5)+
+  # norm
+                geom_line(
+                  mapping = aes(
+                    x=seq(2, 15, 0.01), 
+                    y=pnorm(
+                        seq(2,15,0.01),
+                        mean=norm_mle_gh[1],
+                        sd=norm_mle_gh[2]
+                      ),
+                    color='Normal'
+                  ),
+                  alpha=.5
+                ) +
+    geom_vline(xintercept = mnorm_gh_mle,color='orange')+
+  # gamma
+                geom_line(
+                  mapping = aes(
+                    x=seq(2,15,0.01),
+                    y=pgamma(
+                        seq(2,15,0.01),
+                        shape=gamma_mle_gh[1],
+                        scale=gamma_mle_gh[2]
+                      ),
+                    color='Gamma'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mgamma_gh_mle,color='blue')+
+  # weibull
+                geom_line(
+                  mapping=aes(
+                    x=seq(2,15,0.01),
+                    y=pweibull(
+                      seq(2,15,0.01),
+                      weibull_mle_gh[1],
+                      weibull_mle_gh[2]
+                    ),
+                    color='Weibull'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mweibull_gh_mle,color='green')+
+                scale_color_manual(
+                  name='Model',
+                  breaks=c('Sample','Normal','Gamma','Weibull'),
+                  values=c('Sample'='black','Normal'='orange','Gamma'='blue','Weibull'='green')
+                )+
+                labs(
+                  title = 'ECDF of Glycohemoglobin and Estimated CDF by MLE',
+                  x = 'Glycohemoglobin',
+                  y = 'Cumulative Posibility',
+                  color = 'Model'
+                ) + theme_classic() + theme(legend.position='right')
+)
+
+
+```
+
+We could still see a gap between the models and the empirical data. This deliver the same info that the PDF could do. Gamma distribution is the closest one.
+
+Next we do the CDF plot of Height:
+```{r}
+(
+  cdf_ht_mle <- ggplot() +
+                stat_ecdf(
+                  d1,
+                  mapping=aes(x=ht),
+                ) + 
+    geom_vline(xintercept = median(d1$ht),alpha=.5)+
+  # norm
+                geom_line(
+                  mapping = aes(
+                    x=seq(130, 200, 0.1), 
+                    y=pnorm(seq(130, 200,0.1),
+                    mean=norm_mle_ht[1],
+                    sd=norm_mle_ht[2]
+                    ),
+                    color='Normal'
+                  ),
+                  alpha=.5
+                ) +
+    geom_vline(xintercept = mnorm_ht_mle,color='orange',alpha=.5)+
+  # gamma
+                geom_line(
+                  mapping = aes(
+                    x=seq(130, 200, 0.1), 
+                    y=pgamma(seq(130, 200,0.1),
+                    shape=gamma_mle_ht[1],
+                    scale=gamma_mle_ht[2]
+                    ),
+                    color='Gamma'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mgamma_ht_mle,color='blue',alpha=.5)+
+  # weibull
+                geom_line(
+                  mapping=aes(
+                    x=seq(130, 200, 0.1), 
+                    y=pweibull(seq(130, 200,0.1),
+                    shape=weibull_mle_ht[1],
+                    scale=weibull_mle_ht[2]
+                    ),
+                    color='Weibull'
+                  ),
+                  alpha=.5
+                )+
+    geom_vline(xintercept = mweibull_ht_mle,color='green')+
+                scale_color_manual(
+                  name='Model',
+                  breaks=c('Sample','Normal','Gamma','Weibull'),
+                  values=c('Sample'='black','Normal'='orange','Gamma'='blue','Weibull'='green')
+                )+
+                labs(
+                  title = 'ECDF of Height and Estimated CDF by MLE',
+                  x = 'Height',
+                  y = 'Cumulative Probability',
+                  color = 'Model'
+                ) + theme_classic() + theme(legend.position='right')
+)
+
+```
+
+The models except Weibull distribution fit really well too! Same conclusion as previous one by PDF.
+
+## QQ plot (sample vs estimated dist)
+
+We need to generate all the quantiles:
+```{r}
+qqdata_gh_mle <- data.frame(seq(0.05,0.95,0.02))
+colnames(qqdata_gh_mle) <- c('p')
+qqdata_gh_mle <- qqdata_gh_mle %>% mutate(
+  sample = quantile(d1$gh, p),
+  norm = qnorm(p, norm_mle_gh[1], norm_mle_gh[2]),
+  gamma = qgamma(p, gamma_mle_gh[1],scale=gamma_mle_gh[2]),
+  weibull = qweibull(p, shape=weibull_mle_gh[1],scale=weibull_mle_gh[2])
+)
+
+qqdata_ht_mle <- data.frame(seq(0.05,0.95,0.02))
+colnames(qqdata_ht_mle) <- c('p')
+qqdata_ht_mle <- qqdata_ht_mle %>% mutate(
+  sample = quantile(d1$ht, p),
+  norm = qnorm(p, norm_mle_ht[1], norm_mle_ht[2]),
+  gamma = qgamma(p, gamma_mle_ht[1],scale=gamma_mle_ht[2]),
+  weibull = qweibull(p, shape=weibull_mle_ht[1],scale=weibull_mle_ht[2])
+)
+```
+
+Then we draw the qqplot of Glycohemoglobin:
+```{r}
+(
+  qqplot_gh_mle <- ggplot(qqdata_gh_mle, aes(x=sample)) +
+    geom_point(
+      aes(y=norm, color='Normal'),alpha=.5
+    )+
+    geom_point(
+      aes(y=gamma, color='Gamma'),alpha=.5
+    ) +
+    geom_point(
+      aes(y=weibull, color='Weibull'),alpha=.5
+    ) +
+    geom_abline(slope=1,intercept=0)+
+    scale_color_manual(
+      name='Model',
+      breaks=c('Normal','Gamma','Weibull'),
+      values=c('Normal'='orange','Gamma'='blue','Weibull'='green')
+                )+
+    labs(
+      title = 'QQ Plot of Glycohemoglobin by MLE',
+      x = 'Sample Quantile',
+      y = 'Theoretical Quantile',
+      color = 'Model'
+    ) + theme_classic() + theme(legend.position='right')
+)
+```
+
+We may see that all the models show deviation from the line $y=x$, which indicates that the model still needs improvement.
+
+Next qq plot for the Height:
+```{r}
+(
+  qqplot_ht_mle <- ggplot(qqdata_ht_mle, aes(x=sample)) +
+    geom_point(
+      aes(y=norm, color='Normal'),alpha=.5
+    )+
+    geom_point(
+      aes(y=gamma, color='Gamma'),alpha=.5
+    ) +
+    geom_point(
+      aes(y=weibull, color='Weibull'),alpha=.5
+    ) +
+    geom_abline(slope=1,intercept=0)+
+    scale_color_manual(
+      name='Model',
+      breaks=c('Normal','Gamma','Weibull'),
+      values=c('Normal'='orange','Gamma'='blue','Weibull'='green')
+                )+
+    labs(
+      title = 'QQ Plot of Height by MLE',
+      x = 'Sample Quantile',
+      y = 'Theoretical Quantile',
+      color = 'Model'
+    ) + theme_classic() + theme(legend.position='right')
+)
+```
+
+Weibull distribution fits not well. The other two is good.
+
+# Conclusion
+
+The distribution of female adults’ Glycohemoglobin doesn't follow any of these distributions. The PDF, CDF and QQ plots show gap between the models and the sample.
+
+The distribution of female adults' Height seems to follow either normal or gamma distribution. The PDF, CDF, and QQ plots show nearly the same points. It doesn't fit in Weibull distribution.
+
+MM and MLE gives different estimated parameters, while normal distribution shows nearly same mean and standard deviation. This could be proved by the definition of MLE. Further proof will not be discussed in this blog.
 
 # Reference Links
