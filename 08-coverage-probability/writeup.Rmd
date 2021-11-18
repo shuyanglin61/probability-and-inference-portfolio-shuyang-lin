@@ -1,0 +1,160 @@
+---
+title: "08-coverage-probability"
+author: "Shuyang Lin"
+date: "11/17/2021"
+output: 
+  html_document: default
+  github_document: default
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(stats4)
+library(foreach)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+require(doParallel)
+cores_2_use <- detectCores() - 1
+cl <- makeCluster(cores_2_use)
+clusterSetRNGStream(cl, 2344)
+registerDoParallel(cl)
+```
+
+# Introduction to Coverage Probability^[[08-coverage-probability.md](https://github.com/thomasgstewart/data-science-5620-fall-2021/blob/master/deliverables/08-coverage-probability.md)] 
+
+Coverage probability is an important operating characteristic of methods for constructing interval estimates, particularly confidence intervals.
+
+**Definition**: For the purposes of this deliverable, define the 95% confidence interval of the median to be the middle 95% of sampling distribution of the median. Similarly, the 95% confidence interval of the mean, standard deviation, etc. is the middle 95% of the respective sampling distribution.
+
+**Definition**: For the purposes of this deliverable, define the coverage probability as the long run proportion of intervals that capture the population parameter of interest. Conceptualy, one can calculate the coverage probability with the following steps
+
++ generate a sample of size N from a known distribution
++ construct a confidence interval
++ determine if the confidence captures the population parameter
++ Repeat steps (1) - (3) many times. Estimate the coverage probability as the proportion of samples for which the confidence interval captured the population parameter.
+
+In this assignment, I will perform a simulation to calculate the coverage probability of the 95% confidence interval of the median when computed from $\hat{F}_X^{mle}$. I will write a blog post to explain coverage probability and to explain my simulation.
+
+# MLE of Normal Distribution
+
+When we got a random variable $X \sim N(\mu, \sigma^2)$ and $n$ observations of $X$, we could get a formula of the Maximum Likelihood Estimation as below:
+
+$$
+L(\mu, \sigma^2) = (\frac{1}{\sqrt{2\pi}\sigma})^n e^{-\sum\limits_{i=1}^{n}\frac{(x_i-\mu)^2}{2\sigma^2}}
+$$
+
+If we do a log-transformation, we could at last know that:
+
+$$
+ln L(\mu, \sigma^2) = -\frac{n}{2}ln 2\pi-\frac{n}{2}ln \sigma^2-\frac{1}{2\sigma^2}\sum_{i=1}^n(x_i-\mu)^2
+$$
+
+To maximize the function, we need both partial differentials to be zero:
+
+$$
+\left\{
+\begin{array}{**lr**}
+\frac{\partial ln L}{\partial\mu} =\frac{1}{\sigma^2}\sum_{i=1}^n(x_i-\mu)=0 \\
+\frac{\partial ln L}{\partial\sigma^2} = -\frac{n}{2\sigma^2}+\frac{1}{2\sigma^4}\sum_{i=1}^{n}(x_i-\mu)^2=0
+\end{array}
+\right.
+$$
+
+We could see that $\mu = \frac{1}{n}\sum\limits_{i=1}^{n}x_i$, which in fact means the mean of MLE is equal to the average of the sample. Thus, we could know $\sigma^2 = \frac{1}{n}\sum\limits_{i=1}^{n}(x_i-\mu)^2$, which means the variance of MLE is equal to the variance of the sample.
+
+# Simulate a Standard Normal Distribution
+
+Now we start to cover the coverage probability topic. First we will generate a single sample from a standard normal distribution of size N = 201.
+
+```{r}
+# generate sample
+set.seed(114514)
+sample = rnorm(201, 0, 1)
+```
+
+And as discussed above, the MLE result of the sample is:
+```{r}
+# mle mean
+(mle_mean = mean(sample))
+
+# mle standard deviation
+(mle_sd = sd(sample))
+```
+
+And we draw a plot for this pair of parameters:
+```{r}
+(
+  ggplot() + geom_histogram(aes(x=sample, y=..density..)) + geom_line(mapping=aes(x=seq(-5,5,0.01), y=dnorm(seq(-5,5,0.01),mle_mean,mle_sd))) + labs(title='MLE Distribution of the Sample', x='X', y='Density') + theme_classic()
+)
+```
+
+We could see that the MLE result could fit the sample.
+
+# Approximate the Sampling Distribution of the Median
+
+Now since we know how to get a single sample, we could generate several groups of samples with parameters as the MLE result to estimate a sampling distribution of the median. Let's generate 3000 samples:
+
+```{r, results='hide'}
+medians = rep(NA, 3000)
+for(i in 1:3000){
+  medians[i] = median(rnorm(201, mle_mean, mle_sd))
+}
+```
+
+And we could draw a plot for these medians:
+```{r}
+(
+  ggplot() + geom_histogram(mapping=aes(medians,..density..)) + labs(title='Approximated Sampling Distribution of Medians', x='Median', y='Density') + theme_bw()
+)
+```
+
+We could see that the medians follow a normal distribution approximately.
+
+# Calculate a 95% Confidence Interval
+
+Here we will calculate a two-sided interval for the median by using the function quantile() on the approximate sampling distribution of medians.
+```{r}
+(med_conf_int = quantile(medians, c(0.025, 0.975)))
+```
+
+# Calculate the Coverage Probability
+
+The **coverage probability** is the probability that the confidence interval contains the population parameter. To estimate this probability, we could use the frequency of the sample. Here is the formula:
+
+$$
+\text{Coverage Probability} = \frac{N(\text{Intervals containing 0})}{N(\text{Intervals})}
+$$
+
+And here's the code for one round of this task:
+```{r, results='hide'}
+# get one confidence interval
+get_ci = function() {
+  sample = rnorm(201,0,1)
+  mle_mean = mean(sample)
+  mle_sd = sd(sample)
+  medians = foreach(i = 1:3000, .combine=c) %dopar%{
+    median(rnorm(201, mle_mean, mle_sd))
+  }
+  quantile(medians, c(0.025, 0.975))
+}
+```
+
+And we generate 1000 intervals to calculate the coverage probability:
+```{r, results='hide'}
+# get intervals
+cis = data.frame(t(replicate(1000, get_ci())))
+colnames(cis) = c('2.5%','97.5%')
+```
+
+And then we get the coverage probability:
+```{r}
+# coverage probability
+cis$contains = ifelse(cis$`2.5%`<0 & 0<cis$`97.5%`, 1,0)
+(cp = mean(cis$contains))
+```
+
+```{r, include=F}
+stopCluster(cl)
+```
+
+# Reference Links
