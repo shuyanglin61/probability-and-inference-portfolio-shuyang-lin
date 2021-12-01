@@ -1,0 +1,96 @@
+---
+title: "Simulation Study: Power and Sample Size Calculations Correlational Studies"
+author: "Shuyang Lin"
+date: "12/1/2021"
+output: html_document
+---
+
+# Introduction
+
+A common research objective is to demonstrate that two measurements are highly correlated. One measurement, call it A, may reflect the severity of disease but is difficult or costly to collect. Another measurement, call it B, may be easier to collect and potentially related to measurement A. If there is strong association between A and B, a cost effective strategy for diagnosis may be to collect measurement B instead of A.
+
+The researcher will collect both measurements on N individuals. The analysis will proceed by calculating a one-sided confidence interval. If the confidence interval is completely within the range from 0.8 to 1, then the researcher will consider the study to be a success: A conclusive demonstration that the correlation between A and B is greater than 0.8.
+
+In this blog, I will perform a power and sample size calculation for a collaborator who is submitting a grant application to fund a study to show that two measurements are highly correlated. Reviewers of the grant want to fund studies that have a high likelihood of success, which in this setting is conclusively demonstrating that the correlation between A and B is greater than 0.8.
+
+# Statistics Concepts
+
+**Power** is the probability that the study will end in success when the true underlying correlation is greater that the threshold. In this blog, it means the left side of the confidence interval greater than 0.8.
+
+I will estimate the power for different combinations of sample size and the true population correlation. The sample size will be 25, 50, 75, and 100. The population correlation will range from 0.8 to 0.95. For each combination, the number of confidence intervals will be 5000.
+
+# Initializing Simulation
+
+First we set the random seed and import the package for generating samples from multiple Gauss distribution. To accelerate the computing process, we use the parallel computing packages.
+```{r}
+set.seed(114514)
+suppressPackageStartupMessages(require(mvtnorm))
+suppressPackageStartupMessages(library(foreach))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(require(doParallel))
+cores_2_use <- detectCores() - 1
+cl <- makeCluster(cores_2_use)
+clusterSetRNGStream(cl, 2344)
+registerDoParallel(cl)
+```
+
+Then, we set the parameters combinations:
+```{r}
+N <- c(25, 50, 75, 100)
+rho <- seq(.8, .95, .005)
+null_correlation <- 0.8
+R <- 5000
+data <- data.frame(matrix(NA,length(rho)*length(N),3))
+colnames(data) <- c('N','rho','power')
+i<-1
+for(n in N) {
+  for(p in rho) {
+    data[i,1] <- n
+    data[i,2] <- p
+    i <- i+1
+  }
+}
+```
+
+# Running Simulation
+
+We write a nested loop using foreach from doParallel to compute the power for each combination. The power will be estimated by calculating the frequency of experiments being positive.
+```{r}
+data[,3] <- foreach(i = 1:nrow(data), .combine=c, .packages='mvtnorm') %dopar%{
+  sigma <- array(c(1,data[i,2],data[i,2],1), c(2,2))
+  mu <- c(0,0)
+  detect <- rep(NA, R)
+  for(j in 1:R){
+    sample <- rmvnorm(data[i,1], mean = mu, sigma = sigma)
+    results <- cor.test(x = sample[,1], y = sample[,2], alternative = "greater")
+    detect[j] <- results$conf.int[1] >   null_correlation
+  }
+  mean(detect)
+}
+```
+
+
+# Experiment Result
+
+Let us plot the result:
+```{r}
+(
+  ggplot(data) + geom_line(aes(x=rho,y=power,color=factor(N))) + theme_classic() + labs(x='Correlation',y='Power',color='N') + scale_color_manual(values=c('100'='blue','75'='green','50'='red','25'='black'))+ scale_x_continuous(breaks=seq(0.8,0.96,.02)) + scale_y_continuous(breaks=seq(0,1,0.2))
+)
+```
+
+# Conclusion
+
+For each sample size N, the higher the underlying correlation is, the larger the power is. This could be interpreted by the definition of power. As the underlying correlation is larger than 0.8, the probability that the study will end in success will increase when we know the distribution of the sample is moving to the right side.
+
+For each underlying true correlation, the larger the sample is, the larget the power is. This is because the variance of the sample distribution is related to the sample size. When the sample size increases, the sample powers are more likely to stick to the underlying value, according to CLT. That is, the probability we get a sample value less than 0.8 decreases.
+
+# Stopping Clusters
+
+```{r}
+stopCluster(cl)
+```
+
+
+
+
