@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 require(doParallel)
 cores_2_use <- detectCores() - 1
 cl <- makeCluster(cores_2_use)
-clusterSetRNGStream(cl, 2344)
+clusterSetRNGStream(cl, 114514)
 registerDoParallel(cl)
 ```
 
@@ -140,7 +140,7 @@ get_ci = function() {
 ```
 
 And we generate 1000 intervals to calculate the coverage probability:
-```{r, results='hide'}
+```{r, results='hide', warning=FALSE}
 # get intervals
 cis = data.frame(t(replicate(1000, get_ci())))
 colnames(cis) = c('2.5%','97.5%')
@@ -152,8 +152,36 @@ And then we get the coverage probability:
 cis$contains = ifelse(cis$`2.5%`<0 & 0<cis$`97.5%`, 1,0)
 (cp = mean(cis$contains))
 ```
+Intuitively, we should get 0.95 coverage probability for 95% confidence intervals. Here our simulation performs a bit better than we plan.
+
+# Describe the way to change the simulation to learn more about the operating characteristics of the chosen method for constructing the 95% confidence interval
+
+Simply I could change some parameters in my experiment, like reducing the count of medians from 3000 to 1000, or generate more confidence intervals.
+
+```{r}
+# reduce medians
+new_get_ci = function() {
+  sample = rnorm(201,0,1)
+  mle_mean = mean(sample)
+  mle_sd = sd(sample)
+  medians = foreach(i = 1:1000, .combine=c) %dopar%{
+    median(rnorm(201, mle_mean, mle_sd))
+  }
+  quantile(medians, c(0.025, 0.975))
+}
+cis1 = data.frame(t(replicate(1000, new_get_ci())))
+colnames(cis1) = c('2.5%','97.5%')
+cis1$contains = ifelse(cis1$`2.5%`<0 & 0<cis1$`97.5%`, 1,0)
+(cp = mean(cis1$contains))
+```
+
+We could see an apparent drop of the coverage probability! Therefore, we could adjust the simulation sizes to change the operating characteristics of the method.
+
+
+
 
 ```{r, include=F}
+stopImplicitCluster()
 stopCluster(cl)
 ```
 
