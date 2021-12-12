@@ -1,9 +1,9 @@
 # probability-and-inference-portfolio-shuyang-lin
-This is a repository for Shuyang Lin's deliverables for DS-5620 Probability and Statistical Inference in Fall 2021 at Vanderbilt University.
+This is a repository for Shuyang Lin's deliverables of DS-5620 Probability and Statistical Inference in Fall 2021 at Vanderbilt University.
 
 [01-roulette-simulation](https://vandylins19.github.io/probability-and-inference-portfolio-shuyang-lin/01-roulette-simulation/writeup.html)
 
-[02-monte-carlo-error](https://vandylins19.github.io/probability-and-inference-portfolio-shuyang-lin/01-roulette-simulation/writeup.md)
+[02-monte-carlo-error](https://vandylins19.github.io/probability-and-inference-portfolio-shuyang-lin/02-monte-carlo-error/writeup.html)
 
 [02b-interview-quesion](https://github.com/vandylins19/probability-and-inference-portfolio-shuyang-lin/blob/master/02b-interview-question)
 
