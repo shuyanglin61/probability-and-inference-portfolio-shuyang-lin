@@ -22,3 +22,5 @@ This is a repository for Shuyang Lin's deliverables of DS-5620 Probability and S
 [08-coverage-probability](https://vandylins19.github.io/probability-and-inference-portfolio-shuyang-lin/08-coverage-probability/writeup.html)
 
 [11-correlation-power](https://vandylins19.github.io/probability-and-inference-portfolio-shuyang-lin/11-correlation-power/writeup.html)
+
+[99-final-exam](https://vandylins19.github.io/probability-and-inference-portfolio-shuyang-lin/99-final-exam/final-exam.html)
