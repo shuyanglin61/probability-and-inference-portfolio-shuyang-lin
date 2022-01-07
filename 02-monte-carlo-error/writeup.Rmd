@@ -2,7 +2,7 @@
 title: "Monte Carlo Error"
 author: "Shuyang Lin"
 date: "9/8/2021"
-output: github_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
